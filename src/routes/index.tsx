@@ -220,8 +220,8 @@ function HomePage() {
             {[
               { n: '2016', l: 'Année de fondation' },
               { n: '8+', l: "Années d'enseignement" },
-              { n: '2 500+', l: 'Élèves actifs' },
-              { n: '120+', l: 'Enseignants' },
+              { n: '1 500+', l: 'Élèves actifs' },
+              { n: '30+', l: 'Enseignants' },
             ].map(s => (
               <div
                 key={s.n}

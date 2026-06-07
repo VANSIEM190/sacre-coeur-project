@@ -34,6 +34,7 @@ import TeacherHome from './routes/teacher.index'
 import TeacherClasses from './routes/teacher.classes'
 import TeacherCotations from './routes/teacher.cotations'
 import TeacherHoraires from './routes/teacher.horaires'
+import { supabase } from './supabase/supabaseClient'
 
 function NotFound() {
   return (
@@ -59,6 +60,7 @@ function NotFound() {
 
 export default function App() {
   useThemeEffect()
+  console.log(supabase)
   return (
     <Routes>
       <Route path="/" element={<HomePage />} />
