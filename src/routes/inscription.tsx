@@ -125,18 +125,26 @@ function InscriptionPage() {
             }
             return errors
           }}
-          onSubmit={(values, { setSubmitting, setStatus }) => {
+          // Dans ton fichier InscriptionPage.tsx
+
+          onSubmit={async (values, { setSubmitting, setStatus }) => {
             const fullName =
               `${values.firstName} ${values.middleName} ${values.lastName}`
                 .replace(/\s+/g, ' ')
                 .trim()
-            const result = registerStudent({
+
+            const result = await registerStudent({
               ...values,
               fullName,
               currentClassName: values.currentClassName as SchoolClassName,
             })
+
             setSubmitting(false)
-            if (!result.ok) return setStatus(result.error)
+
+            if (!result.ok) {
+              return setStatus(result.error)
+            }
+
             setSubmitted(true)
             setTimeout(() => navigate('/login'), 4000)
           }}
