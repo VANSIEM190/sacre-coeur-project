@@ -21,7 +21,7 @@ export interface BaseUser {
   id: string
   email: string
   role: UserRole
-  fullName: string
+  fullName?: string
   createdAt: string
 }
 

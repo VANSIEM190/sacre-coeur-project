@@ -21,21 +21,41 @@ function LoginPage() {
   const [password, setPassword] = useState('')
   const [teacherAccessId, setTeacherAccessId] = useState('')
   const [error, setError] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
 
-  const { loginAsAdmin, loginAsTeacher, loginAsStudent } = useAuthStore()
+  const { login } = useAuthStore()
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
-    let result
-    if (role === 'admin') result = loginAsAdmin(email, password)
-    else if (role === 'teacher') result = loginAsTeacher(email, teacherAccessId)
-    else result = loginAsStudent(email, password)
+    setIsLoading(true)
 
-    if (!result.ok) return setError(result.error ?? 'Échec de connexion')
-    navigate(
-      role === 'admin' ? '/admin' : role === 'teacher' ? '/teacher' : '/student'
-    )
+    try {
+      const effectivePassword = role === 'teacher' ? teacherAccessId : password
+      const result = await login(email, effectivePassword)
+
+      if (!result.ok) {
+        setError(result.error ?? 'Échec de connexion')
+        setIsLoading(false)
+        return
+      }
+
+      if (result.role !== role) {
+        setError(
+          `Ce compte n'est pas enregistré en tant qu'${role === 'student' ? 'élève' : role === 'teacher' ? 'enseignant' : 'administrateur'}.`
+        )
+        setIsLoading(false)
+        return
+      }
+
+      if (result.role === 'admin') navigate('/admin')
+      else if (result.role === 'teacher') navigate('/teacher')
+      else if (result.role === 'student') navigate('/student')
+    } catch (err) {
+      setError('Une erreur réseau ou serveur est survenue.' + err)
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -136,7 +156,8 @@ function LoginPage() {
 
             <button
               type="submit"
-              className="w-full py-3.5 rounded-xl bg-sacred-red text-white font-semibold shadow-lg shadow-sacred-red/20 hover:scale-[1.01] transition-transform"
+              className="w-full py-3.5 rounded-xl bg-sacred-red text-white font-semibold shadow-lg shadow-sacred-red/20 hover:scale-[1.01] transition-transform disabled:cursor-not-allowed"
+              disabled={isLoading}
             >
               Se connecter
             </button>
