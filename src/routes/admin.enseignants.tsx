@@ -4,40 +4,48 @@ import { useAuthStore } from '@/stores/auth-store'
 import { ALL_CLASS_NAMES } from '@/lib/mock-seed'
 import type { SchoolClassName, TeacherUser } from '@/lib/types'
 import { Plus, Trash2, Copy } from 'lucide-react'
+import { SupabaseErrorHandler } from '@/services/SupabaseErrorHandler'
 
 function AdminTeachers() {
   const users = useAuthStore(s => s.registeredUsers)
-  const upsert = useAuthStore(s => s.upsertUser)
+  const createTeacher = useAuthStore(s => s.createTeacher)
   const remove = useAuthStore(s => s.removeUser)
   const teachers = users.filter((u): u is TeacherUser => u.role === 'teacher')
 
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [classes, setClasses] = useState<SchoolClassName[]>([])
+  const [isPending, setIsPending] = useState(false)
 
   const toggleClass = (c: SchoolClassName) =>
     setClasses(prev =>
       prev.includes(c) ? prev.filter(x => x !== c) : [...prev, c]
     )
 
-  const generateAccessId = () =>
-    `SC-T-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`
-
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault()
-    const newTeacher: TeacherUser = {
-      id: `teacher-${Date.now()}`,
-      email,
-      role: 'teacher',
-      fullName: name,
-      teacherAccessId: generateAccessId(),
-      assignedClassNames: classes,
-      createdAt: new Date().toISOString(),
+    if (isPending) return
+
+    setIsPending(true)
+    try {
+      const result = await createTeacher({
+        fullName: name,
+        email: email,
+        assignedClassNames: classes,
+      })
+
+      if (result.ok) {
+        setName('')
+        setEmail('')
+        setClasses([])
+      } else {
+        SupabaseErrorHandler.handle(result.error)
+      }
+    } catch (err) {
+      SupabaseErrorHandler.handle(err)
+    } finally {
+      setIsPending(false)
     }
-    upsert(newTeacher)
-    setName('')
-    setEmail('')
-    setClasses([])
   }
 
   return (

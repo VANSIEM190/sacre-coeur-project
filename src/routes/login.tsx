@@ -2,6 +2,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useState, useEffect } from 'react'
 import { useAuthStore } from '@/stores/auth-store'
+import { authServices } from '@/services/AuthServices'
 import type { UserRole } from '@/lib/types'
 
 const roleOptions: { value: UserRole; label: string; hint: string }[] = [
@@ -20,19 +21,47 @@ function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [teacherAccessId, setTeacherAccessId] = useState('')
+
+  const [isActivating, setIsActivating] = useState(false)
+  const [successMessage, setSuccessMessage] = useState('')
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
 
   const { login } = useAuthStore()
 
+  // --- BRAIN UPGRADE : PLUS DE USEEFFECT ICI ---
+  // On gère le changement de rôle proprement dans une fonction dédiée
+  const handleRoleChange = (newRole: UserRole) => {
+    setRole(newRole)
+    setError('')
+    setSuccessMessage('')
+    setIsActivating(false)
+    setPassword('') // Optionnel : nettoie le mot de passe pour des raisons de sécurité
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
+    setSuccessMessage('')
     setIsLoading(true)
 
     try {
-      const effectivePassword = role === 'teacher' ? teacherAccessId : password
-      const result = await login(email, effectivePassword)
+      if (role === 'teacher' && isActivating) {
+        await authServices.activateTeacherAccount(
+          email,
+          teacherAccessId,
+          password
+        )
+        setSuccessMessage(
+          'Votre compte a été activé avec succès ! Vous pouvez maintenant vous connecter.'
+        )
+        setIsActivating(false)
+        setPassword('')
+        setIsLoading(false)
+        return
+      }
+
+      const result = await login(email, password)
 
       if (!result.ok) {
         setError(result.error ?? 'Échec de connexion')
@@ -42,7 +71,13 @@ function LoginPage() {
 
       if (result.role !== role) {
         setError(
-          `Ce compte n'est pas enregistré en tant qu'${role === 'student' ? 'élève' : role === 'teacher' ? 'enseignant' : 'administrateur'}.`
+          `Ce compte n'est pas enregistré en tant qu'${
+            role === 'student'
+              ? 'élève'
+              : role === 'teacher'
+                ? 'enseignant'
+                : 'administrateur'
+          }.`
         )
         setIsLoading(false)
         return
@@ -51,8 +86,8 @@ function LoginPage() {
       if (result.role === 'admin') navigate('/admin')
       else if (result.role === 'teacher') navigate('/teacher')
       else if (result.role === 'student') navigate('/student')
-    } catch (err) {
-      setError('Une erreur réseau ou serveur est survenue.' + err)
+    } catch (err: any) {
+      setError(err.message || 'Une erreur réseau ou serveur est survenue.')
     } finally {
       setIsLoading(false)
     }
@@ -60,6 +95,7 @@ function LoginPage() {
 
   return (
     <div className="min-h-screen bg-background grid lg:grid-cols-2">
+      {/* Colonne Gauche - Design */}
       <div className="hidden lg:block relative overflow-hidden bg-sacred-red">
         <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_30%_20%,white,transparent_60%)]" />
         <div className="relative h-full flex flex-col justify-between p-12 text-white">
@@ -81,6 +117,7 @@ function LoginPage() {
         </div>
       </div>
 
+      {/* Colonne Droite - Formulaire */}
       <div className="flex items-center justify-center p-6 lg:p-12">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -88,14 +125,21 @@ function LoginPage() {
           transition={{ duration: 0.5 }}
           className="w-full max-w-md"
         >
-          <h1 className="font-display text-4xl mb-2">Connexion</h1>
-          <p className="opacity-60 mb-8">Accédez à votre espace personnel.</p>
+          <h1 className="font-display text-4xl mb-2">
+            {role === 'teacher' && isActivating ? 'Activation' : 'Connexion'}
+          </h1>
+          <p className="opacity-60 mb-8">
+            {role === 'teacher' && isActivating
+              ? 'Activez votre accès enseignant avec votre matricule.'
+              : 'Accédez à votre espace personnel.'}
+          </p>
 
+          {/* Sélecteur de rôles mis à jour avec handleRoleChange */}
           <div className="grid grid-cols-3 gap-2 p-1.5 bg-muted rounded-2xl mb-8">
             {roleOptions.map(r => (
               <button
                 key={r.value}
-                onClick={() => setRole(r.value)}
+                onClick={() => handleRoleChange(r.value)} // Modification ici
                 type="button"
                 className={`py-2.5 rounded-xl text-xs font-semibold transition-all ${
                   role === r.value
@@ -120,28 +164,46 @@ function LoginPage() {
               />
             </Field>
 
-            {role === 'teacher' ? (
-              <Field label="ID Enseignant">
-                <input
-                  type="text"
-                  required
-                  value={teacherAccessId}
-                  onChange={e => setTeacherAccessId(e.target.value)}
-                  className="auth-input font-mono"
-                  placeholder="SC-T-2024-XXXX"
-                />
-              </Field>
-            ) : (
-              <Field label="Mot de passe">
-                <input
-                  type="password"
-                  required
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  className="auth-input"
-                  placeholder="••••••••"
-                />
-              </Field>
+            {role === 'teacher' && isActivating && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                className="space-y-4"
+              >
+                <Field label="ID Enseignant / Matricule">
+                  <input
+                    type="text"
+                    required
+                    value={teacherAccessId}
+                    onChange={e => setTeacherAccessId(e.target.value)}
+                    className="auth-input font-mono"
+                    placeholder="SC-T-2026-XXXX"
+                  />
+                </Field>
+              </motion.div>
+            )}
+
+            <Field
+              label={
+                role === 'teacher' && isActivating
+                  ? 'Définir un mot de passe'
+                  : 'Mot de passe'
+              }
+            >
+              <input
+                type="password"
+                required
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                className="auth-input"
+                placeholder="••••••••"
+              />
+            </Field>
+
+            {successMessage && (
+              <div className="px-4 py-3 rounded-xl bg-emerald-500/10 text-emerald-500 text-sm">
+                {successMessage}
+              </div>
             )}
 
             {error && (
@@ -159,37 +221,44 @@ function LoginPage() {
               className="w-full py-3.5 rounded-xl bg-sacred-red text-white font-semibold shadow-lg shadow-sacred-red/20 hover:scale-[1.01] transition-transform disabled:cursor-not-allowed"
               disabled={isLoading}
             >
-              Se connecter
+              {isLoading
+                ? 'Chargement...'
+                : role === 'teacher' && isActivating
+                  ? 'Activer mon espace'
+                  : 'Se connecter'}
             </button>
           </form>
 
-          <div className="mt-6 text-center text-sm opacity-70">
-            Pas encore inscrit ?{' '}
-            <Link
-              to="/inscription"
-              className="text-sacred-red font-semibold hover:underline"
-            >
-              Créer un compte élève
-            </Link>
-          </div>
+          <div className="mt-6 text-center text-sm opacity-70 space-y-2">
+            {role === 'teacher' && (
+              <div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsActivating(!isActivating)
+                    setError('')
+                    setSuccessMessage('')
+                  }}
+                  className="text-sacred-red font-semibold hover:underline"
+                >
+                  {isActivating
+                    ? 'Retour à la connexion normale'
+                    : 'Première connexion ? Activez votre compte'}
+                </button>
+              </div>
+            )}
 
-          <div className="mt-8 p-4 rounded-xl bg-muted text-xs opacity-70 leading-relaxed">
-            <p className="font-bold mb-2 opacity-100">
-              Comptes de démonstration
-            </p>
-            <p>
-              Admin : <span className="font-mono">admin@sacrecoeur.edu</span> —
-              mot de passe libre
-            </p>
-            <p>
-              Enseignant :{' '}
-              <span className="font-mono">kabongo@sacrecoeur.edu</span> — ID{' '}
-              <span className="font-mono">SC-T-2024-8821</span>
-            </p>
-            <p>
-              Élève : <span className="font-mono">jean.kabeya@student.edu</span>{' '}
-              — mot de passe libre
-            </p>
+            {role === 'student' && (
+              <div>
+                Pas encore inscrit ?{' '}
+                <Link
+                  to="/inscription"
+                  className="text-sacred-red font-semibold hover:underline"
+                >
+                  Créer un compte élève
+                </Link>
+              </div>
+            )}
           </div>
         </motion.div>
       </div>

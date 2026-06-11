@@ -40,6 +40,63 @@ class AuthServices {
     }
   }
 
+  async activateTeacherAccount(
+    email: string,
+    matricule: string,
+    password: string
+  ): Promise<void> {
+    try {
+      const { data: teacher, error: teacherError } = await supabase
+        .from('enseignants_details')
+        .select('id')
+        .eq('email', email)
+        .eq('matriculeEnseignant', matricule)
+        .maybeSingle()
+
+      if (teacherError) throw teacherError
+      if (!teacher) {
+        throw new Error(
+          'Aucun enseignant ne correspond à cet email et ce matricule. Contactez votre administrateur.'
+        )
+      }
+
+      const { data: signUpData, error: signUpError } =
+        await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              role: 'teacher',
+            },
+          },
+        })
+
+      if (signUpError) throw signUpError
+      if (!signUpData.user)
+        throw new Error('Erreur lors de la création du compte de sécurité.')
+
+      const { error: profileError } = await supabase.from('profiles').insert([
+        {
+          id: signUpData.user.id,
+          email: email,
+          role: 'teacher',
+        },
+      ])
+
+      if (profileError) throw profileError
+
+      const { error: updateError } = await supabase
+        .from('enseignants_details')
+        .update({ id: signUpData.user.id })
+        .eq('email', email)
+
+      if (updateError) throw updateError
+    } catch (error) {
+      SupabaseErrorHandler.handle(error)
+      throw error
+    }
+  }
+
   async logout(): Promise<void> {
     try {
       const { error } = await supabase.auth.signOut()

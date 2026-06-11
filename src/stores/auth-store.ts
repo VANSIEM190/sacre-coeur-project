@@ -1,21 +1,21 @@
 // @/stores/auth-store.ts
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
-import type { AnyUser, StudentUser } from '@/lib/types'
-import { seedAdmin, seedTeachers, seedStudents } from '@/lib/mock-seed'
+import type { AnyUser, StudentUser, TeacherUser } from '@/lib/types'
 // IMPORTATION DES SERVICES SUPABASE
 import {
   studentService,
   type RegisterStudentInput,
 } from '@/services/StudentServices'
 import { authServices, type UserRole } from '@/services/AuthServices'
+import { teacherServices } from '@/services/TeacherServices'
+import { supabase } from '@/supabase/supabaseClient'
 
 interface AuthState {
   currentUser: AnyUser | null
   registeredUsers: AnyUser[]
   theme: 'light' | 'dark'
 
-  // Fonction de login unifiée retournant une promesse avec le statut et le rôle
   login: (
     email: string,
     password: string
@@ -28,6 +28,12 @@ interface AuthState {
     > & { password?: string }
   ) => Promise<{ ok: boolean; error?: string }>
 
+  createTeacher: (
+    data: Omit<TeacherUser, 'id' | 'role' | 'createdAt' | 'teacherAccessId'>
+  ) => Promise<{ ok: boolean; error?: string }>
+
+  removeUser: (id: string) => void
+
   logout: () => Promise<void>
   setTheme: (theme: 'light' | 'dark') => void
   toggleTheme: () => void
@@ -37,12 +43,10 @@ export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
       currentUser: null,
-      registeredUsers: [
-        seedAdmin,
-        ...seedTeachers,
-        ...seedStudents,
-      ] as AnyUser[],
+      registeredUsers: [] as AnyUser[],
       theme: 'light',
+
+      // Extrait mis à jour de ton @/stores/auth-store.ts
 
       login: async (email, password) => {
         try {
@@ -50,7 +54,7 @@ export const useAuthStore = create<AuthState>()(
             return { ok: false, error: 'Veuillez remplir tous les champs.' }
           }
 
-          // 2. Appel au service d'authentification centralisé
+          // 1. Appel au service d'authentification centralisé (Auth + Rôle depuis profiles)
           const { user, role } = await authServices.login(email, password)
 
           if (!user) {
@@ -60,7 +64,8 @@ export const useAuthStore = create<AuthState>()(
             }
           }
 
-          const userSession: AnyUser = {
+          // Base de la session utilisateur pour l'état global
+          let userSession: AnyUser = {
             id: user.id,
             email: user.email ?? email,
             role: role,
@@ -68,6 +73,38 @@ export const useAuthStore = create<AuthState>()(
             createdAt: user.created_at,
           } as AnyUser
 
+          // 2. SI L'UTILISATEUR EST UN ENSEIGNANT : On va chercher ses détails par son EMAIL
+          if (role === 'teacher') {
+            const { data: teacherData, error: teacherError } = await supabase
+              .from('enseignants_details')
+              .select('*')
+              .eq('email', user.email ?? email) // Liaison logique par l'email !
+              .maybeSingle() // On utilise maybeSingle pour éviter de crash s'il n'a pas encore de fiche
+
+            if (teacherError) {
+              console.error(
+                'Erreur récupération détails enseignant:',
+                teacherError
+              )
+            }
+
+            if (teacherData) {
+              // On enrichit la session utilisateur avec ses données de prof issues de enseignants_details
+              userSession = {
+                ...userSession,
+                fullName: teacherData.fullName || userSession.fullName,
+                teacherAccessId: teacherData.matriculeEnseignant,
+                assignedClassNames: teacherData.assignedclasses || [],
+              } as TeacherUser
+            }
+          }
+
+          // 3. SI L'UTILISATEUR EST UN ÉLÈVE : (Optionnel, même logique si besoin)
+          if (role === 'student') {
+            // Tu pourras faire la même chose ici avec la table eleves_details si nécessaire
+          }
+
+          // Mise à jour de l'état global Zustand
           set({ currentUser: userSession })
 
           return { ok: true, role }
@@ -140,7 +177,7 @@ export const useAuthStore = create<AuthState>()(
           set({ registeredUsers: [...get().registeredUsers, newStudent] })
 
           return { ok: true }
-        } catch (err: unknown) {
+        } catch (err) {
           const errorMessage =
             err instanceof Error
               ? err.message
@@ -150,13 +187,37 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
+      createTeacher: async teacherData => {
+        try {
+          const newTeacher = await teacherServices.register(teacherData)
+
+          set({ registeredUsers: [...get().registeredUsers, newTeacher] })
+
+          return { ok: true }
+        } catch (err) {
+          const errorMessage =
+            err instanceof Error
+              ? err.message
+              : "Erreur lors de la création de l'enseignant."
+          return {
+            ok: false,
+            error: errorMessage,
+          }
+        }
+      },
+
+      removeUser: id => {
+        set({
+          registeredUsers: get().registeredUsers.filter(user => user.id !== id),
+        })
+      },
+
       logout: async () => {
         try {
           await authServices.logout()
         } catch (error) {
           console.error('Erreur durant le logout global:', error)
         } finally {
-          // On nettoie impérativement le state de l'application
           set({ currentUser: null })
         }
       },
@@ -168,7 +229,7 @@ export const useAuthStore = create<AuthState>()(
     {
       name: 'sacre-coeur-auth',
       storage: createJSONStorage(() =>
-        typeof window !== 'undefined' ? localStorage : (sessionStorage as any)
+        typeof window !== 'undefined' ? localStorage : sessionStorage
       ),
     }
   )
