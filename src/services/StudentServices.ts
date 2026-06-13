@@ -47,7 +47,6 @@ class StudentServices {
       const { error: profileError } = await supabase.from('profiles').insert({
         id: userId,
         email: values.email,
-        password: values.password,
         role: 'student',
       })
 
