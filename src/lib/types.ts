@@ -1,6 +1,13 @@
 // Domain types — SRP, explicit naming
 export type UserRole = 'admin' | 'teacher' | 'student'
 
+export interface ClassName {
+  id: string
+  nom_classe: string
+  annee_scolaire: string
+  studentCount: number
+}
+
 export type SchoolClassName =
   | '1ère Primaire'
   | '2ème Primaire'

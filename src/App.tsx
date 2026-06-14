@@ -35,6 +35,7 @@ import TeacherClasses from './routes/teacher.classes'
 import TeacherCotations from './routes/teacher.cotations'
 import TeacherHoraires from './routes/teacher.horaires'
 import { supabase } from './supabase/supabaseClient'
+import { Toaster } from 'sonner'
 
 function NotFound() {
   return (
@@ -62,45 +63,49 @@ export default function App() {
   useThemeEffect()
   console.log(supabase)
   return (
-    <Routes>
-      <Route path="/" element={<HomePage />} />
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/inscription" element={<InscriptionPage />} />
-      <Route path="/ecole" element={<EcolePage />} />
-      <Route path="/autorites" element={<AutoritesPage />} />
-      <Route path="/confidentialite" element={<ConfidentialitePage />} />
-      <Route path="/support" element={<SupportPage />} />
+    <>
+      <Toaster position="bottom-right" />
 
-      <Route path="/admin" element={<AdminLayout />}>
-        <Route index element={<AdminHome />} />
-        <Route path="annonces" element={<AdminAnnonces />} />
-        <Route path="archives" element={<AdminArchives />} />
-        <Route path="classes" element={<AdminClasses />} />
-        <Route path="cours" element={<AdminCours />} />
-        <Route path="enseignants" element={<AdminTeachers />} />
-        <Route path="horaires" element={<AdminHoraires />} />
-        <Route path="paiements" element={<AdminPaiements />} />
-        <Route path="palmares" element={<AdminPalmares />} />
-        <Route path="validations" element={<AdminValidations />} />
-      </Route>
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/inscription" element={<InscriptionPage />} />
+        <Route path="/ecole" element={<EcolePage />} />
+        <Route path="/autorites" element={<AutoritesPage />} />
+        <Route path="/confidentialite" element={<ConfidentialitePage />} />
+        <Route path="/support" element={<SupportPage />} />
 
-      <Route path="/student" element={<StudentLayout />}>
-        <Route index element={<StudentHome />} />
-        <Route path="annonces" element={<StudentAnnonces />} />
-        <Route path="cours" element={<StudentCours />} />
-        <Route path="horaires" element={<StudentHoraires />} />
-        <Route path="paiements" element={<StudentPaiements />} />
-        <Route path="points" element={<StudentPoints />} />
-      </Route>
+        <Route path="/admin" element={<AdminLayout />}>
+          <Route index element={<AdminHome />} />
+          <Route path="annonces" element={<AdminAnnonces />} />
+          <Route path="archives" element={<AdminArchives />} />
+          <Route path="classes" element={<AdminClasses />} />
+          <Route path="cours" element={<AdminCours />} />
+          <Route path="enseignants" element={<AdminTeachers />} />
+          <Route path="horaires" element={<AdminHoraires />} />
+          <Route path="paiements" element={<AdminPaiements />} />
+          <Route path="palmares" element={<AdminPalmares />} />
+          <Route path="validations" element={<AdminValidations />} />
+        </Route>
 
-      <Route path="/teacher" element={<TeacherLayout />}>
-        <Route index element={<TeacherHome />} />
-        <Route path="classes" element={<TeacherClasses />} />
-        <Route path="cotations" element={<TeacherCotations />} />
-        <Route path="horaires" element={<TeacherHoraires />} />
-      </Route>
+        <Route path="/student" element={<StudentLayout />}>
+          <Route index element={<StudentHome />} />
+          <Route path="annonces" element={<StudentAnnonces />} />
+          <Route path="cours" element={<StudentCours />} />
+          <Route path="horaires" element={<StudentHoraires />} />
+          <Route path="paiements" element={<StudentPaiements />} />
+          <Route path="points" element={<StudentPoints />} />
+        </Route>
 
-      <Route path="*" element={<NotFound />} />
-    </Routes>
+        <Route path="/teacher" element={<TeacherLayout />}>
+          <Route index element={<TeacherHome />} />
+          <Route path="classes" element={<TeacherClasses />} />
+          <Route path="cotations" element={<TeacherCotations />} />
+          <Route path="horaires" element={<TeacherHoraires />} />
+        </Route>
+
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </>
   )
 }
