@@ -4,8 +4,9 @@ import { Formik, Form, Field, ErrorMessage } from 'formik'
 import { z } from 'zod'
 import { useState, useEffect } from 'react'
 import { useAuthStore } from '@/stores/auth-store'
-import { ALL_CLASS_NAMES } from '@/lib/mock-seed'
 import type { SchoolClassName } from '@/lib/types'
+import { useFetchData } from '@/hooks/useQuery'
+import { classService } from '@/services/classService'
 
 const studentSchema = z.object({
   lastName: z.string().trim().min(1, 'Requis').max(60),
@@ -50,7 +51,7 @@ const initialValues: StudentFormValues = {
   email: '',
   password: '',
   previousSchoolPercentage: 0,
-  currentClassName: '1ère Secondaire',
+  currentClassName: '',
   previousSchoolName: '',
   religion: 'Catholique',
   address: '',
@@ -65,6 +66,10 @@ function InscriptionPage() {
   const navigate = useNavigate()
   const registerStudent = useAuthStore(s => s.registerStudent)
   const [submitted, setSubmitted] = useState(false)
+  const { data } = useFetchData(['classes'], classService.getAllClasses)
+
+  const classNameFiltered = data?.filter(className => className.nom_classe)
+  console.log(data)
 
   if (submitted) {
     return (
@@ -168,7 +173,7 @@ function InscriptionPage() {
                     options={[
                       ['M', 'Masculin'],
                       ['F', 'Féminin'],
-                    ]}
+                    ].map(([value, label]) => ({ value, label }))}
                   />
                 </FormGrid>
               </FormSection>
@@ -204,7 +209,12 @@ function InscriptionPage() {
                   <FormikSelect
                     name="currentClassName"
                     label="Classe actuelle"
-                    options={ALL_CLASS_NAMES.map(c => [c, c])}
+                    options={
+                      classNameFiltered?.map(cl => ({
+                        value: cl.id,
+                        label: cl.nom_classe,
+                      })) || []
+                    }
                   />
                   <FormikField
                     name="previousSchoolName"
@@ -309,6 +319,11 @@ function FormikField({
   )
 }
 
+interface SelectOption {
+  value: string
+  label: string
+}
+
 function FormikSelect({
   name,
   label,
@@ -316,7 +331,7 @@ function FormikSelect({
 }: {
   name: string
   label: string
-  options: [string, string][]
+  options: SelectOption[]
 }) {
   return (
     <label className="block">
@@ -324,9 +339,10 @@ function FormikSelect({
         {label}
       </span>
       <Field name={name} as="select" className="fk-input">
-        {options.map(([v, l]) => (
-          <option key={v} value={v}>
-            {l}
+        <option value="">Sélectionnez une option</option>
+        {options?.map(option => (
+          <option key={option.value} value={option.value}>
+            {option.label}
           </option>
         ))}
       </Field>

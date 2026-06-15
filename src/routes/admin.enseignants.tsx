@@ -1,51 +1,82 @@
 import { useState } from 'react'
 import { PageHeader } from '@/components/dashboard-shell'
 import { useAuthStore } from '@/stores/auth-store'
-import { ALL_CLASS_NAMES } from '@/lib/mock-seed'
-import type { SchoolClassName, TeacherUser } from '@/lib/types'
-import { Plus, Trash2, Copy } from 'lucide-react'
+import type { TeacherUser } from '@/lib/types'
+import { Plus, Trash2, Copy, Loader2 } from 'lucide-react'
 import { SupabaseErrorHandler } from '@/services/SupabaseErrorHandler'
+import { classService } from '@/services/classService'
+import { useFetchData, useMutateData } from '@/hooks/useQuery'
+import { useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 
 function AdminTeachers() {
+  const queryClient = useQueryClient()
   const users = useAuthStore(s => s.registeredUsers)
   const createTeacher = useAuthStore(s => s.createTeacher)
   const remove = useAuthStore(s => s.removeUser)
+
+  // Filtrage des enseignants depuis le store global
   const teachers = users.filter((u): u is TeacherUser => u.role === 'teacher')
 
+  // États locaux du formulaire
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
-  const [classes, setClasses] = useState<SchoolClassName[]>([])
-  const [isPending, setIsPending] = useState(false)
 
-  const toggleClass = (c: SchoolClassName) =>
-    setClasses(prev =>
-      prev.includes(c) ? prev.filter(x => x !== c) : [...prev, c]
-    )
+  // Remplacement de SchoolClassName par un tableau de strings (les noms des classes dynamiques)
+  const [selectedClasses, setSelectedClasses] = useState<string[]>([])
 
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (isPending) return
+  // 1. REQUÊTE : Récupération des classes dynamiques depuis Supabase
+  const {
+    data: classesData = [],
+    isLoading: isLoadingClasses,
+    isError: isClassesError,
+  } = useFetchData(['classes'], classService.getAllClasses)
 
-    setIsPending(true)
-    try {
-      const result = await createTeacher({
-        fullName: name,
-        email: email,
-        assignedClassNames: classes,
-      })
+  // 2. MUTATION : Création d'un enseignant via TanStack Query
+  const createTeacherMutation = useMutateData(
+    (newTeacher: {
+      fullName: string
+      email: string
+      assignedClassNames: string[]
+    }) => createTeacher(newTeacher),
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['teacher'] })
+        toast.success('Enseignant créé avec succès')
 
-      if (result.ok) {
+        // Reset du formulaire
         setName('')
         setEmail('')
-        setClasses([])
-      } else {
-        SupabaseErrorHandler.handle(result.error)
-      }
-    } catch (err) {
-      SupabaseErrorHandler.handle(err)
-    } finally {
-      setIsPending(false)
+        setSelectedClasses([])
+      },
+      onError: err => SupabaseErrorHandler.handle(err),
     }
+  )
+
+  // Gestion du toggle des badges (on travaille maintenant sur des chaînes de caractères pures)
+  const toggleClass = (className: string) => {
+    setSelectedClasses(prev =>
+      prev.includes(className)
+        ? prev.filter(x => x !== className)
+        : [...prev, className]
+    )
+  }
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!name.trim() || !email.trim()) return
+
+    createTeacherMutation.mutate({
+      fullName: name,
+      email: email,
+      assignedClassNames: selectedClasses, // Envoyé dynamiquement
+    })
+  }
+
+  const handleCopyAccessId = (accessId: string) => {
+    if (!navigator.clipboard) return
+    navigator.clipboard.writeText(accessId)
+    toast.success("ID d'accès copié")
   }
 
   return (
@@ -56,7 +87,7 @@ function AdminTeachers() {
       />
 
       <form
-        onSubmit={submit}
+        onSubmit={handleSubmit}
         className="p-6 rounded-3xl bg-card border border-border mb-8 space-y-4"
       >
         <h2 className="font-display text-xl">Nouvel enseignant</h2>
@@ -65,8 +96,9 @@ function AdminTeachers() {
             value={name}
             onChange={e => setName(e.target.value)}
             required
+            type="text"
             placeholder="Nom complet"
-            className="px-4 py-3 rounded-xl border border-border bg-background"
+            className="px-4 py-3 rounded-xl border border-border bg-background focus:outline-none focus:border-primary text-sm"
           />
           <input
             value={email}
@@ -74,71 +106,121 @@ function AdminTeachers() {
             type="email"
             required
             placeholder="Email"
-            className="px-4 py-3 rounded-xl border border-border bg-background"
+            className="px-4 py-3 rounded-xl border border-border bg-background focus:outline-none focus:border-primary text-sm"
           />
         </div>
+
+        {/* Section Sélection des Classes Dynamiques */}
         <div>
           <p className="text-xs uppercase tracking-widest opacity-70 mb-2">
             Classes attribuées
           </p>
-          <div className="flex flex-wrap gap-2">
-            {ALL_CLASS_NAMES.map(c => (
-              <button
-                key={c}
-                type="button"
-                onClick={() => toggleClass(c)}
-                className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
-                  classes.includes(c)
-                    ? 'bg-sacred-red text-white border-sacred-red'
-                    : 'border-border opacity-70'
-                }`}
-              >
-                {c}
-              </button>
-            ))}
-          </div>
+
+          {isLoadingClasses ? (
+            <div className="flex items-center gap-2 py-2 text-xs opacity-60">
+              <Loader2 className="size-4 animate-spin text-primary" />
+              <span>Chargement des classes...</span>
+            </div>
+          ) : isClassesError ? (
+            <p className="text-xs text-destructive py-2">
+              Erreur lors de la récupération des classes.
+            </p>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {classesData.map(c => {
+                const isSelected = selectedClasses.includes(c.nom_classe)
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => toggleClass(c.nom_classe)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
+                      isSelected
+                        ? 'bg-sacred-red text-white border-sacred-red shadow-sm'
+                        : 'border-border opacity-70 hover:opacity-100 bg-background'
+                    }`}
+                  >
+                    {c.nom_classe}
+                  </button>
+                )
+              })}
+              {classesData.length === 0 && (
+                <p className="text-xs opacity-50 italic">
+                  Aucune classe trouvée. Créez d'abord une classe dans l'onglet
+                  Classes.
+                </p>
+              )}
+            </div>
+          )}
         </div>
+
         <button
           type="submit"
-          className="px-5 py-2.5 rounded-full bg-sacred-red text-white font-semibold flex items-center gap-2"
+          disabled={createTeacherMutation.isPending}
+          className="px-5 py-2.5 rounded-full bg-sacred-red text-white font-semibold flex items-center gap-2 hover:opacity-90 transition-opacity disabled:opacity-50"
         >
-          <Plus className="size-4" /> Créer l'enseignant
+          {createTeacherMutation.isPending ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            <Plus className="size-4" />
+          )}
+          <span>
+            {createTeacherMutation.isPending
+              ? 'Création...'
+              : "Créer l'enseignant"}
+          </span>
         </button>
       </form>
 
+      {/* Liste des enseignants */}
       <div className="space-y-3">
         {teachers.map(t => (
           <div
             key={t.id}
-            className="p-5 rounded-2xl bg-card border border-border"
+            className="p-5 rounded-2xl bg-card border border-border flex flex-col gap-3"
           >
-            <div className="flex items-start justify-between gap-4 mb-3">
+            <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="font-semibold">{t.fullName}</p>
                 <p className="text-xs opacity-60">{t.email}</p>
               </div>
               <div className="flex gap-2">
                 <button
-                  onClick={() =>
-                    navigator.clipboard?.writeText(t.teacherAccessId)
-                  }
-                  className="px-3 py-2 rounded-full border border-border text-xs font-mono flex items-center gap-1.5 hover:bg-muted"
+                  type="button"
+                  onClick={() => handleCopyAccessId(t.teacherAccessId)}
+                  className="px-3 py-2 rounded-full border border-border text-xs font-mono flex items-center gap-1.5 hover:bg-muted transition-colors"
                 >
                   <Copy className="size-3" /> {t.teacherAccessId}
                 </button>
                 <button
-                  onClick={() => remove(t.id)}
-                  className="size-9 rounded-full border border-border grid place-items-center hover:bg-destructive hover:text-destructive-foreground"
+                  type="button"
+                  onClick={() =>
+                    confirm(`Supprimer le compte de ${t.fullName} ?`) &&
+                    remove(t.id)
+                  }
+                  className="size-9 rounded-full border border-border grid place-items-center hover:bg-destructive hover:text-destructive-foreground transition-all"
                 >
                   <Trash2 className="size-4" />
                 </button>
               </div>
             </div>
-            <p className="text-xs opacity-60">
-              Classes : {t.assignedClassNames.join(', ') || 'Aucune'}
-            </p>
+
+            <div className="pt-2 border-t border-border/40">
+              <p className="text-xs opacity-60">
+                <span className="font-medium">Classes associées :</span>{' '}
+                {t.assignedClassNames && t.assignedClassNames.length > 0
+                  ? t.assignedClassNames.join(', ')
+                  : 'Aucune classe configurée'}
+              </p>
+            </div>
           </div>
         ))}
+
+        {teachers.length === 0 && (
+          <p className="text-sm text-center py-12 opacity-50 border border-dashed border-border rounded-2xl">
+            Aucun enseignant enregistré pour le moment.
+          </p>
+        )}
       </div>
     </div>
   )

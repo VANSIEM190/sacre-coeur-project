@@ -1,5 +1,5 @@
 import { supabase } from '@/supabase/supabaseClient'
-import type { ClassName } from '@/lib/types'
+import type { ClassName, StudentUser } from '@/lib/types'
 
 interface SupabaseClassResponse {
   id: string
@@ -14,6 +14,14 @@ interface SupabaseTeacherLinkResponse {
   classe_id: string
   matiere: string | null
   created_at?: string
+}
+
+export interface StudentClassList {
+  id: string
+  lastName: string
+  firstName: string
+  middleName: string
+  email: string
 }
 
 class ClassService {
@@ -36,6 +44,21 @@ class ClassService {
     }))
   }
 
+  async getStudentsInClass(classId: string): Promise<StudentUser[]> {
+    const { data, error } = await supabase
+      .from('eleves_details')
+      .select('*')
+      .eq('classe_id', classId)
+      .order('lastName', { ascending: true })
+
+    if (error) throw error
+    if (!data) return []
+
+    const rawStudents = data as StudentUser[]
+
+    return rawStudents
+  }
+
   async createClass(
     nomClasse: string,
     anneeScolaire: string
@@ -46,7 +69,7 @@ class ClassService {
       .from('classes')
       .insert([
         {
-          nom_classe: nomClasse.toUpperCase(),
+          nom_classe: nomClasse,
           annee_scolaire: anneeScolaire,
         },
       ])

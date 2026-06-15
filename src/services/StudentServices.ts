@@ -75,6 +75,7 @@ class StudentServices {
           religion: values.religion,
           address: values.address,
           province: values.province,
+          classe_id: values.currentClassName,
         })
 
       if (detailsError) throw detailsError

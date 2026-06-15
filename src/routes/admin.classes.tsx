@@ -1,64 +1,69 @@
 import { useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQueryClient } from '@tanstack/react-query'
 import { PageHeader } from '@/components/dashboard-shell'
 import { useAuthStore } from '@/stores/auth-store'
 import { classService } from '@/services/classService'
-import type { StudentUser } from '@/lib/types'
 import { Trash2, ArrowLeft, Plus, X, Loader2 } from 'lucide-react'
 import { SupabaseErrorHandler } from '@/services/SupabaseErrorHandler'
 import { toast } from 'sonner'
+import { useFetchData, useMutateData } from '@/hooks/useQuery'
 
 function AdminClasses() {
   const queryClient = useQueryClient()
-  const users = useAuthStore(s => s.registeredUsers)
+  // const users = useAuthStore(s => s.registeredUsers)
   const remove = useAuthStore(s => s.removeUser)
   const [selected, setSelected] = useState<string | null>(null)
+  const [selectedIdClasse, SetSelectedIdClasse] = useState<string>('')
 
   // États pour le Modal
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [newClassName, setNewClassName] = useState('')
   const [schoolYear, setSchoolYear] = useState('2026-2027')
 
-  const students = users.filter(
-    (u): u is StudentUser => u.role === 'student' && u.isValidatedByAdmin
-  )
-
   // 1. REQUÊTE : Récupération des classes avec TanStack Query
   const {
     data: classes = [],
     isLoading,
     isError,
-  } = useQuery({
-    queryKey: ['classes'],
-    queryFn: classService.getAllClasses,
-    staleTime: 1000 * 60 * 5,
-  })
+  } = useFetchData(['classes'], classService.getAllClasses)
 
-  // 2. MUTATION : Création d'une classe avec TanStack Query
-  const createClassMutation = useMutation({
-    mutationFn: ({ name, year }: { name: string; year: string }) =>
+  // 2. REQUÊTE : Récupération des élèves par classe avec TanStack Query
+  const {
+    data: studentsData = [],
+    isLoading: studentLoading,
+    isError: studentsError,
+  } = useFetchData(['studentClasses', selectedIdClasse], () =>
+    classService.getStudentsInClass(selectedIdClasse)
+  )
+
+  // 3. MUTATION : Création d'une classe avec TanStack Query
+  const createClassMutation = useMutateData(
+    ({ name, year }: { name: string; year: string }) =>
       classService.createClass(name, year),
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['classes'] })
 
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['classes'] })
+        toast.success('classe créee avec succès')
 
-      toast.success('classe créee avec succès')
+        setNewClassName('')
+        setIsModalOpen(false)
+      },
+      onError: err => SupabaseErrorHandler.handle(err),
+    }
+  )
 
-      setNewClassName('')
-      setIsModalOpen(false)
-    },
-    onError: err => SupabaseErrorHandler.handle(err),
-  })
-
-  // 3. MUTATION : Suppression d'une classe avec TanStack Query
-  const deleteClassMutation = useMutation({
-    mutationFn: (classId: string) => classService.deleteClass(classId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['classes'] })
-      toast.success('classe supprimée avec succès')
-    },
-    onError: err => SupabaseErrorHandler.handle(err),
-  })
+  // 4. MUTATION : Suppression d'une classe avec TanStack Query
+  const deleteClassMutation = useMutateData(
+    (classId: string) => classService.deleteClass(classId),
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['classes'] })
+        toast.success('classe supprimée avec succès')
+      },
+      onError: err => SupabaseErrorHandler.handle(err),
+    }
+  )
 
   const handleCreateClass = (e: React.FormEvent) => {
     e.preventDefault()
@@ -79,11 +84,25 @@ function AdminClasses() {
   }
 
   if (selected) {
-    const list = students.filter(s => s.currentClassName === selected)
-    return (
+    const list = studentsData.filter(s => s.classe_id === selectedIdClasse)
+    return studentLoading ? (
+      <div className="flex flex-col items-center justify-center py-24 gap-3 opacity-60">
+        <Loader2 className="size-8 animate-spin text-primary" />
+        <p className="text-sm">Chargement des élèves...</p>
+      </div>
+    ) : studentsError ? (
+      <div className="text-center py-12 text-destructive">
+        <p className="text-sm">
+          Une erreur est survenue lors de la récupération des données.
+        </p>
+      </div>
+    ) : (
       <div>
         <button
-          onClick={() => setSelected(null)}
+          onClick={() => {
+            setSelected(null)
+            SetSelectedIdClasse('')
+          }}
           className="text-sm opacity-60 hover:opacity-100 flex items-center gap-2 mb-4"
         >
           <ArrowLeft className="size-4" /> Retour aux classes
@@ -96,12 +115,16 @@ function AdminClasses() {
               className="p-4 rounded-2xl bg-card border border-border flex items-center justify-between"
             >
               <div>
-                <p className="font-semibold">{s.fullName}</p>
-                <p className="text-xs opacity-60">{s.email}</p>
+                <p className="font-semibold">
+                  {s.lastName} {s.middleName} {s.firstName}
+                </p>
+                <p className="text-xs opacity-60">phone : {s.phone}</p>
               </div>
               <button
                 onClick={() =>
-                  confirm(`Supprimer ${s.fullName} ?`) && remove(s.id)
+                  confirm(
+                    `Supprimer ${s.lastName} ${s.middleName} ${s.firstName} ?`
+                  ) && remove(s.id)
                 }
                 className="size-9 rounded-full border border-border grid place-items-center hover:bg-destructive hover:text-destructive-foreground"
               >
@@ -152,7 +175,10 @@ function AdminClasses() {
           {classes.map(c => (
             <div
               key={c.id}
-              onClick={() => setSelected(c.nom_classe)}
+              onClick={() => {
+                setSelected(c.nom_classe)
+                SetSelectedIdClasse(c.id)
+              }}
               className="p-6 rounded-3xl bg-card border border-border text-left hover:shadow-xl hover:-translate-y-1 transition-all flex items-start justify-between group"
             >
               <div>
