@@ -5,7 +5,7 @@ import type { TeacherUser } from '@/lib/types'
 interface RegisterTeacherInput {
   fullName: string
   email: string
-  assignedClassNames: string[]
+  assignedClassIds: string[]
 }
 
 class TeacherServices {
@@ -18,14 +18,15 @@ class TeacherServices {
   async register(data: RegisterTeacherInput): Promise<TeacherUser> {
     const accessId = this.generateAccessId()
 
+    //  On enregistre les identifiants bruts (IDs) dans la colonne correspondante
     const { data: teacherData, error: teacherError } = await supabase
       .from('enseignants_details')
       .insert([
         {
           fullName: data.fullName,
           email: data.email,
-          assignedclasses: data.assignedClassNames,
           matriculeEnseignant: accessId,
+          assignedclasses: data.assignedClassIds,
         },
       ])
       .select()

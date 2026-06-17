@@ -39,7 +39,7 @@ export interface AdminUser extends BaseUser {
 export interface TeacherUser extends BaseUser {
   role: 'teacher'
   teacherAccessId: string
-  assignedClassNames: string[]
+  assignedClassNames?: string[]
 }
 
 export interface StudentUser extends BaseUser {
