@@ -8,7 +8,7 @@ function AdminArchives() {
   const items = useSchoolStore(s => s.archives)
   const create = useSchoolStore(s => s.createArchive)
   const remove = useSchoolStore(s => s.deleteArchive)
-  const update = useSchoolStore(s => s.updateArchive) // Récupération de la méthode de mise à jour du store
+  const update = useSchoolStore(s => s.updateArchive)
 
   // États locaux du formulaire de création
   const [form, setForm] = useState({
