@@ -115,8 +115,25 @@ export interface ArchiveDocument {
   title: string
   year: number
   category: 'Palmarès' | 'Bulletin' | 'Procès-Verbal' | 'Autre'
+  file: string
   description: string
-  createdAt: string
+  created_at: string
+}
+
+export interface ArchiveDocumentInput {
+  title: string
+  year: number
+  category: 'Palmarès' | 'Bulletin' | 'Procès-Verbal' | 'Autre'
+  file: File
+  description: string
+}
+
+export interface ArchiveDocumentUpdateInput {
+  title: string
+  year: number
+  category: 'Palmarès' | 'Bulletin' | 'Procès-Verbal' | 'Autre'
+  file?: File | null
+  description: string
 }
 
 export interface AnnualHonorRoll {
