@@ -1,13 +1,26 @@
 import { PageHeader } from '@/components/dashboard-shell'
 import { useState, useMemo } from 'react'
-import { Plus, Trash2, Edit3, X, Check, Search, Loader2 } from 'lucide-react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import {
+  Plus,
+  Trash2,
+  Edit3,
+  X,
+  Check,
+  Search,
+  Loader2,
+  Download,
+} from 'lucide-react'
+import { useQueryClient } from '@tanstack/react-query'
 import { adminArchivesServices } from '@/services/AdminArchivesServices'
 import type {
   ArchiveDocument,
   ArchiveDocumentInput,
   ArchiveDocumentUpdateInput,
 } from '@/lib/types'
+import { useFetchData, useMutateData } from '@/hooks/useQuery'
+import { SupabaseErrorHandler } from '@/services/SupabaseErrorHandler'
+import { filterElement } from '@/utils/filterElements'
+import { supabase } from '@/supabase/supabaseClient'
 
 function AdminArchives() {
   const queryClient = useQueryClient()
@@ -18,48 +31,49 @@ function AdminArchives() {
     isLoading,
     isError,
     error,
-  } = useQuery({
-    queryKey: ['archives'],
-    queryFn: () => adminArchivesServices.getArchives(),
-  })
+  } = useFetchData(['archives'], adminArchivesServices.getArchives)
 
   // --- TANSTACK QUERY : MUTATIONS ---
-  const createMutation = useMutation({
-    mutationFn: (values: ArchiveDocumentInput) =>
+  const createMutation = useMutateData(
+    (values: ArchiveDocumentInput) =>
       adminArchivesServices.createArchive(values),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['archives'] })
-      setForm({
-        title: '',
-        year: new Date().getFullYear(),
-        category: 'Palmarès',
-        description: '',
-      })
-      setFile(null)
-    },
-  })
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['archives'] })
+        setForm({
+          title: '',
+          year: new Date().getFullYear(),
+          category: 'Palmarès',
+          description: '',
+        })
+        setFile(null)
+      },
+      onError: err => SupabaseErrorHandler.handle(err),
+    }
+  )
 
-  const updateMutation = useMutation({
-    mutationFn: ({
-      id,
-      values,
-    }: {
-      id: string
-      values: ArchiveDocumentUpdateInput
-    }) => adminArchivesServices.updateArchive(id, values),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['archives'] })
-      setEditingId(null)
-    },
-  })
+  const updateMutation = useMutateData(
+    ({ id, values }: { id: string; values: ArchiveDocumentUpdateInput }) =>
+      adminArchivesServices.updateArchive(id, values),
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['archives'] })
+        setEditingId(null)
+      },
+      onError: err => SupabaseErrorHandler.handle(err),
+    }
+  )
 
-  const deleteMutation = useMutation({
-    mutationFn: (payload: { archiveId: string; filePath: string }) =>
+  const deleteMutation = useMutateData(
+    (payload: { archiveId: string; filePath: string }) =>
       adminArchivesServices.deleteArchive(payload),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['archives'] })
-    },
-  })
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['archives'] })
+      },
+      onError: err => SupabaseErrorHandler.handle(err),
+    }
+  )
 
   // États locaux du formulaire de création
   const [form, setForm] = useState({
@@ -87,17 +101,12 @@ function AdminArchives() {
 
   // Logique de filtrage en mémoire (identique et optimisée)
   const filteredItems = useMemo(() => {
-    return items.filter(a => {
-      const matchesSearch =
-        a.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        a.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        a.year.toString().includes(searchQuery)
-
-      const matchesCategory =
-        selectedCategoryFilter === 'Tous' ||
-        a.category === selectedCategoryFilter
-
-      return matchesSearch && matchesCategory
+    return filterElement({
+      items: items,
+      keys: ['title', 'description', 'year'],
+      searchQuery: searchQuery,
+      selectKey: 'category',
+      selectedValue: selectedCategoryFilter,
     })
   }, [items, searchQuery, selectedCategoryFilter])
 
@@ -108,7 +117,7 @@ function AdminArchives() {
       year: archive.year,
       category: archive.category,
       description: archive.description,
-      file: null, // On réinitialise l'input file temporaire d'édition
+      file: null,
     })
   }
 
@@ -125,6 +134,36 @@ function AdminArchives() {
   const handleUpdateSubmit = (e: React.FormEvent, id: string) => {
     e.preventDefault()
     updateMutation.mutate({ id, values: editForm })
+  }
+
+  // Fonctionnalité de téléchargement du document
+  const handleDownloadFile = async (filePath: string, title: string) => {
+    try {
+      const { data, error } = await supabase.storage
+        .from('sacre-coeur-files-archives')
+        .download(filePath)
+
+      if (error) throw error
+
+      // Création d'un lien temporaire dans le DOM pour forcer le téléchargement du fichier courant
+      const url = window.URL.createObjectURL(data)
+      const link = document.createElement('a')
+      link.href = url
+
+      // Extraction de l'extension d'origine du fichier
+      const extension = filePath.split('.').pop()
+      link.setAttribute('download', `${title}.${extension}`)
+
+      document.body.appendChild(link)
+      link.click()
+
+      // Nettoyage du DOM
+      link.parentNode?.removeChild(link)
+      window.URL.revokeObjectURL(url)
+    } catch (err) {
+      alert('Impossible de télécharger le fichier. Veuillez réessayer.')
+      console.error(err)
+    }
   }
 
   return (
@@ -355,6 +394,15 @@ function AdminArchives() {
                   </div>
 
                   <div className="flex items-center gap-2 shrink-0">
+                    {/* BOUTON DE TÉLÉCHARGEMENT AJOUTÉ ICI */}
+                    <button
+                      onClick={() => handleDownloadFile(a.file, a.title)}
+                      className="size-9 rounded-full border border-border grid place-items-center hover:bg-muted text-primary transition-colors"
+                      title="Télécharger l'archive"
+                    >
+                      <Download className="size-4" />
+                    </button>
+
                     <button
                       onClick={() => handleStartEdit(a)}
                       className="size-9 rounded-full border border-border grid place-items-center hover:bg-muted text-primary transition-colors"

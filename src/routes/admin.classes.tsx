@@ -1,12 +1,13 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { PageHeader } from '@/components/dashboard-shell'
 import { useAuthStore } from '@/stores/auth-store'
-import { classService } from '@/services/classService'
-import { Trash2, ArrowLeft, Plus, X, Loader2 } from 'lucide-react'
+import { classService } from '@/services/classServices'
+import { Trash2, ArrowLeft, Plus, X, Loader2, Search } from 'lucide-react'
 import { SupabaseErrorHandler } from '@/services/SupabaseErrorHandler'
 import { toast } from 'sonner'
 import { useFetchData, useMutateData } from '@/hooks/useQuery'
+import { filterElement } from '@/utils/filterElements'
 
 function AdminClasses() {
   const queryClient = useQueryClient()
@@ -19,6 +20,9 @@ function AdminClasses() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [newClassName, setNewClassName] = useState('')
   const [schoolYear, setSchoolYear] = useState('2026-2027')
+
+  // État pour le filtrage des élèves
+  const [studentSearchQuery, setStudentSearchQuery] = useState('')
 
   // 1. REQUÊTE : Récupération des classes avec TanStack Query
   const {
@@ -82,9 +86,18 @@ function AdminClasses() {
       deleteClassMutation.mutate(classId)
     }
   }
+  // Logique de filtrage textuelle sur la liste filtrée par classe
+  const list = studentsData.filter(s => s.classe_id === selectedIdClasse)
+
+  const filteredStudents = useMemo(() => {
+    return filterElement({
+      items: list,
+      keys: ['firstName', 'middleName', 'lastName', 'phone'],
+      searchQuery: studentSearchQuery,
+    })
+  }, [list, studentSearchQuery])
 
   if (selected) {
-    const list = studentsData.filter(s => s.classe_id === selectedIdClasse)
     return studentLoading ? (
       <div className="flex flex-col items-center justify-center py-24 gap-3 opacity-60">
         <Loader2 className="size-8 animate-spin text-primary" />
@@ -102,14 +115,33 @@ function AdminClasses() {
           onClick={() => {
             setSelected(null)
             SetSelectedIdClasse('')
+            setStudentSearchQuery('') // Réinitialisation propre à la fermeture
           }}
           className="text-sm opacity-60 hover:opacity-100 flex items-center gap-2 mb-4"
         >
           <ArrowLeft className="size-4" /> Retour aux classes
         </button>
-        <PageHeader title={selected} subtitle={`${list.length} élève(s)`} />
+        <PageHeader
+          title={selected}
+          subtitle={`${filteredStudents.length} élève(s) trouvé(s)`}
+        />
+
+        {/* ZONE DE FILTRAGE DES ÉLÈVES (Design copié sur le système de filtre existant) */}
+        <div className="p-5 rounded-3xl bg-card border border-border mb-6">
+          <div className="relative w-full">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 size-4 opacity-50" />
+            <input
+              type="text"
+              placeholder="Rechercher un élève par nom, prénom, téléphone..."
+              value={studentSearchQuery}
+              onChange={e => setStudentSearchQuery(e.target.value)}
+              className="w-full pl-11 pr-4 py-2.5 rounded-xl border border-border bg-background focus:outline-none focus:border-primary text-sm"
+            />
+          </div>
+        </div>
+
         <div className="space-y-2">
-          {list.map(s => (
+          {filteredStudents.map(s => (
             <div
               key={s.id}
               className="p-4 rounded-2xl bg-card border border-border flex items-center justify-between"
@@ -132,9 +164,9 @@ function AdminClasses() {
               </button>
             </div>
           ))}
-          {list.length === 0 && (
-            <p className="text-sm opacity-60 text-center py-12">
-              Aucun élève dans cette classe.
+          {filteredStudents.length === 0 && (
+            <p className="text-sm opacity-60 text-center py-12 border border-dashed border-border rounded-2xl">
+              Aucun élève ne correspond à vos critères de recherche.
             </p>
           )}
         </div>

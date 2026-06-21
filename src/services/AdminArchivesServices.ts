@@ -59,15 +59,16 @@ class AdminArchivesServices {
   ): Promise<void> {
     const { data: oldArchive, error: fetchError } = await supabase
       .from('archives')
-      .select('file_path')
+      .select('file')
       .eq('id', id)
       .single()
 
     if (fetchError) throw fetchError
 
-    const updateData: any = {
+    const updateData = {
       title: values.title,
       year: values.year,
+      file: values.file?.name,
       category: values.category,
       description: values.description,
     }
@@ -103,10 +104,10 @@ class AdminArchivesServices {
       throw updateError
     }
 
-    if (values.file && oldArchive?.file_path) {
+    if (values.file && oldArchive?.file) {
       await supabase.storage
         .from('sacre-coeur-files-archives')
-        .remove([oldArchive.file_path])
+        .remove([oldArchive.file])
     }
   }
 

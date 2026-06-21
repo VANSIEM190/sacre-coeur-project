@@ -91,13 +91,14 @@ export interface Course {
 
 export interface ScheduleEntry {
   id: string
-  className: SchoolClassName
+  // className: string
   dayOfWeek: 'Lundi' | 'Mardi' | 'Mercredi' | 'Jeudi' | 'Vendredi' | 'Samedi'
   startTime: string
   endTime: string
   subject: string
-  teacherId?: string
+  teacherName: string
   room: string
+  classe_id: string
 }
 
 export interface GradingSheet {
@@ -154,4 +155,12 @@ export interface PaymentReceipt {
   paidAt: string
   cashierName: string
   receiptNumber: string
+}
+
+export interface filterElementType<T> {
+  items: T[]
+  keys: (keyof T)[]
+  searchQuery: string
+  selectKey?: keyof T
+  selectedValue?: string
 }

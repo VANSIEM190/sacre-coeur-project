@@ -6,7 +6,7 @@ import { useState, useEffect } from 'react'
 import { useAuthStore } from '@/stores/auth-store'
 import type { SchoolClassName } from '@/lib/types'
 import { useFetchData } from '@/hooks/useQuery'
-import { classService } from '@/services/classService'
+import { classService } from '@/services/classServices'
 
 const studentSchema = z.object({
   lastName: z.string().trim().min(1, 'Requis').max(60),
