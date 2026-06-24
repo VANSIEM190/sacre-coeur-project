@@ -58,11 +58,6 @@ class HorraireServices {
     }
   }
 
-  /**
-   * Met à jour une période de cours existante
-   * @param id L'identifiant unique de la période à modifier
-   * @param updates Les champs partiels à mettre à jour
-   */
   async updateScheduleEntry(
     id: string,
     updates: Partial<Omit<ScheduleEntry, 'id' | 'classe_id' | 'created_at'>>
@@ -104,10 +99,6 @@ class HorraireServices {
     }
   }
 
-  /**
-   * Supprime définitivement une période de cours de la base de données
-   * @param id L'identifiant unique de la période à supprimer
-   */
   async deleteScheduleEntry(id: string): Promise<boolean> {
     const { error } = await supabase
       .from('schedule_entries')
