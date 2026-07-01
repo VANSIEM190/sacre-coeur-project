@@ -72,7 +72,7 @@ function LoginPage() {
       if (result.role !== role) {
         setError(
           `Ce compte n'est pas enregistré en tant qu'${
-            role === 'student'
+            role === 'parent'
               ? 'élève'
               : role === 'teacher'
                 ? 'enseignant'
@@ -85,7 +85,7 @@ function LoginPage() {
 
       if (result.role === 'admin') navigate('/admin')
       else if (result.role === 'teacher') navigate('/teacher')
-      else if (result.role === 'student') navigate('/student')
+      else if (result.role === 'parent') navigate('/student')
     } catch (err: any) {
       setError(err.message || 'Une erreur réseau ou serveur est survenue.')
     } finally {

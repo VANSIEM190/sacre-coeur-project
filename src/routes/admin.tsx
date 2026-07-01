@@ -11,7 +11,7 @@ import {
   CreditCard,
   UserCheck,
 } from 'lucide-react'
-import { DashboardShell } from '@/components/dashboard-shell'
+import { DashboardShell } from '@/components/Dashboard-shell'
 
 const adminNavItems = [
   { to: '/admin', label: 'Tableau de bord', icon: LayoutDashboard },

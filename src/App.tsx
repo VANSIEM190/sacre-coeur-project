@@ -3,7 +3,7 @@ import { useThemeEffect } from '@/hooks/use-theme-effect'
 
 import HomePage from './routes/index'
 import LoginPage from './routes/login'
-import InscriptionPage from './routes/inscription'
+import InscriptionParentPage from './routes/parentInscription'
 import EcolePage from './routes/ecole'
 import AutoritesPage from './routes/autorites'
 import ConfidentialitePage from './routes/confidentialite'
@@ -69,7 +69,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
-        <Route path="/inscription" element={<InscriptionPage />} />
+        <Route path="/inscription" element={<InscriptionParentPage />} />
         <Route path="/ecole" element={<EcolePage />} />
         <Route path="/autorites" element={<AutoritesPage />} />
         <Route path="/confidentialite" element={<ConfidentialitePage />} />

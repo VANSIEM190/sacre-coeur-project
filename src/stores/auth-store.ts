@@ -1,12 +1,12 @@
 // @/stores/auth-store.ts
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
-import type { AnyUser, StudentUser, TeacherUser } from '@/lib/types'
+import type { AnyUser, RegisterParentUser, TeacherUser } from '@/lib/types'
 // IMPORTATION DES SERVICES SUPABASE
 import {
-  studentService,
-  type RegisterStudentInput,
-} from '@/services/StudentServices'
+  parentService,
+  type RegisterParentInput,
+} from '@/services/ParentServices'
 import { authServices, type UserRole } from '@/services/AuthServices'
 import { teacherServices } from '@/services/TeacherServices'
 import { supabase } from '@/supabase/supabaseClient'
@@ -21,9 +21,9 @@ interface AuthState {
     password: string
   ) => Promise<{ ok: boolean; role?: UserRole; error?: string }>
 
-  registerStudent: (
+  registerParent: (
     data: Omit<
-      StudentUser,
+      RegisterParentUser,
       'id' | 'role' | 'isValidatedByAdmin' | 'createdAt'
     > & { password?: string }
   ) => Promise<{ ok: boolean; error?: string }>
@@ -121,7 +121,7 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      registerStudent: async data => {
+      registerParent: async data => {
         try {
           if (!data.password || data.password.trim() === '') {
             return {
@@ -130,14 +130,13 @@ export const useAuthStore = create<AuthState>()(
             }
           }
 
-          const registerInput: RegisterStudentInput = {
+          const registerInput: RegisterParentInput = {
             ...data,
             password: data.password,
             middleName: data.middleName ?? null,
-            childMedicalCondition: data.childMedicalCondition ?? null,
           }
 
-          const supabaseUser = await studentService.register(registerInput)
+          const supabaseUser = await parentService.register(registerInput)
 
           if (!supabaseUser) {
             return {
@@ -146,32 +145,19 @@ export const useAuthStore = create<AuthState>()(
             }
           }
 
-          const newStudent: StudentUser = {
+          const newStudent: RegisterParentUser = {
             id: supabaseUser.id,
             email: data.email,
-            role: 'student',
+            password: data.password,
+            role: 'parent',
             fullName: `${data.firstName} ${data.lastName}`.trim(),
             createdAt: new Date().toISOString(),
-            isValidatedByAdmin: false,
-            currentClassName: data.currentClassName,
             lastName: data.lastName,
             middleName: data.middleName ?? '',
             firstName: data.firstName,
-            birthDate: data.birthDate,
-            birthPlace: data.birthPlace,
-            gender: data.gender,
-            fatherName: data.fatherName,
-            motherName: data.motherName,
-            fatherProfession: data.fatherProfession,
-            motherProfession: data.motherProfession,
-            childMedicalCondition: data.childMedicalCondition ?? '',
             guardianRelation: data.guardianRelation,
+            profession: data.profession,
             phone: data.phone,
-            previousSchoolPercentage: data.previousSchoolPercentage,
-            previousSchoolName: data.previousSchoolName,
-            religion: data.religion,
-            address: data.address,
-            province: data.province,
           }
 
           set({ registeredUsers: [...get().registeredUsers, newStudent] })

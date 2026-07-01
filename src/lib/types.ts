@@ -1,5 +1,5 @@
 // Domain types — SRP, explicit naming
-export type UserRole = 'admin' | 'teacher' | 'student'
+export type UserRole = 'admin' | 'teacher' | 'student' | 'parent'
 
 export interface ClassName {
   id: string
@@ -42,6 +42,17 @@ export interface TeacherUser extends BaseUser {
   assignedClassNames?: string[]
 }
 
+export interface RegisterParentUser extends BaseUser {
+  role: 'parent'
+  password: string
+  lastName: string
+  middleName?: string | null
+  firstName: string
+  guardianRelation: string
+  profession: string
+  phone: string
+}
+
 export interface StudentUser extends BaseUser {
   role: 'student'
   isValidatedByAdmin: boolean
@@ -68,7 +79,7 @@ export interface StudentUser extends BaseUser {
   classe_id?: string
 }
 
-export type AnyUser = AdminUser | TeacherUser | StudentUser
+export type AnyUser = AdminUser | TeacherUser | StudentUser | RegisterParentUser
 
 export interface Announcement {
   id: string

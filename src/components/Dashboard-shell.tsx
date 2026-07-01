@@ -13,7 +13,7 @@ export interface DashboardNavItem {
 interface DashboardShellProps {
   navItems: DashboardNavItem[]
   roleLabel: string
-  requiredRole: 'admin' | 'teacher' | 'student'
+  requiredRole: 'admin' | 'teacher' | 'student' | 'parent'
   children: ReactNode
 }
 

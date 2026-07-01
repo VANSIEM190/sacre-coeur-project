@@ -7,7 +7,7 @@ import {
   Award,
   CreditCard,
 } from 'lucide-react'
-import { DashboardShell } from '@/components/dashboard-shell'
+import { DashboardShell } from '@/components/Dashboard-shell'
 
 const studentNavItems = [
   { to: '/student', label: 'Tableau de bord', icon: LayoutDashboard },
@@ -22,8 +22,8 @@ function StudentLayout() {
   return (
     <DashboardShell
       navItems={studentNavItems}
-      roleLabel="Élève"
-      requiredRole="student"
+      roleLabel="parent"
+      requiredRole="parent"
     >
       <Outlet />
     </DashboardShell>
