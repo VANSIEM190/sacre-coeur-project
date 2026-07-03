@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Plus, Trash2, Pencil } from 'lucide-react'
-import { PageHeader } from '@/components/dashboard-shell'
+import { PageHeader } from '@/components/Dashboard-shell'
 import { useSchoolStore } from '@/stores/school-store'
 import { useAuthStore } from '@/stores/auth-store'
 import { ALL_CLASS_NAMES } from '@/lib/mock-seed'

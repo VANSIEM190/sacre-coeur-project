@@ -88,7 +88,7 @@ export default function App() {
           <Route path="validations" element={<AdminValidations />} />
         </Route>
 
-        <Route path="/student" element={<StudentLayout />}>
+        <Route path="/parent" element={<StudentLayout />}>
           <Route index element={<StudentHome />} />
           <Route path="annonces" element={<StudentAnnonces />} />
           <Route path="cours" element={<StudentCours />} />

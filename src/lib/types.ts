@@ -39,7 +39,7 @@ export interface AdminUser extends BaseUser {
 export interface TeacherUser extends BaseUser {
   role: 'teacher'
   teacherAccessId: string
-  assignedClassNames?: string[]
+  assignedclasses: string[]
 }
 
 export interface RegisterParentUser extends BaseUser {
@@ -110,6 +110,7 @@ export interface ScheduleEntry {
   teacherName: string
   room: string
   classe_id: string
+  created_at: string
 }
 
 export interface GradingSheet {

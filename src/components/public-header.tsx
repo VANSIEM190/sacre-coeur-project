@@ -74,7 +74,7 @@ export function PublicHeader() {
                   ? '/admin'
                   : currentUser.role === 'teacher'
                     ? '/teacher'
-                    : '/student'
+                    : '/parent'
               }
               className="hidden sm:inline-flex px-5 py-2.5 rounded-full bg-sacred-red text-white text-sm font-semibold shadow-lg shadow-sacred-red/20 hover:scale-105 transition-transform"
             >

@@ -18,7 +18,7 @@ import type {
   ArchiveDocumentUpdateInput,
 } from '@/lib/types'
 import { useFetchData, useMutateData } from '@/hooks/useQuery'
-import { SupabaseErrorHandler } from '@/services/SupabaseErrorHandler'
+import { SupabaseErrorHandler } from '@/services/core/Supabase.error.handler'
 import { filterElement } from '@/utils/filterElements'
 import { supabase } from '@/supabase/supabaseClient'
 

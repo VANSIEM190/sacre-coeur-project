@@ -2,13 +2,14 @@ import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useState, useEffect } from 'react'
 import { useAuthStore } from '@/stores/auth-store'
-import { authServices } from '@/services/AuthServices'
 import type { UserRole } from '@/lib/types'
+import { SupabaseErrorHandler } from '@/services/core/Supabase.error.handler'
+import { teacherService } from '@/services/teacher/teacher.service'
 
 const roleOptions: { value: UserRole; label: string; hint: string }[] = [
   { value: 'admin', label: 'Administration', hint: "Direction de l'école" },
   { value: 'teacher', label: 'Enseignant', hint: 'Avec ID enseignant' },
-  { value: 'student', label: 'Élève', hint: 'Compte validé' },
+  { value: 'parent', label: 'Parent', hint: 'Compte validé' },
 ]
 
 function LoginPage() {
@@ -29,7 +30,6 @@ function LoginPage() {
 
   const { login } = useAuthStore()
 
-  // --- BRAIN UPGRADE : PLUS DE USEEFFECT ICI ---
   // On gère le changement de rôle proprement dans une fonction dédiée
   const handleRoleChange = (newRole: UserRole) => {
     setRole(newRole)
@@ -47,11 +47,7 @@ function LoginPage() {
 
     try {
       if (role === 'teacher' && isActivating) {
-        await authServices.activateTeacherAccount(
-          email,
-          teacherAccessId,
-          password
-        )
+        await teacherService.activateAccount(email, teacherAccessId, password)
         setSuccessMessage(
           'Votre compte a été activé avec succès ! Vous pouvez maintenant vous connecter.'
         )
@@ -73,7 +69,7 @@ function LoginPage() {
         setError(
           `Ce compte n'est pas enregistré en tant qu'${
             role === 'parent'
-              ? 'élève'
+              ? 'parent'
               : role === 'teacher'
                 ? 'enseignant'
                 : 'administrateur'
@@ -85,9 +81,9 @@ function LoginPage() {
 
       if (result.role === 'admin') navigate('/admin')
       else if (result.role === 'teacher') navigate('/teacher')
-      else if (result.role === 'parent') navigate('/student')
-    } catch (err: any) {
-      setError(err.message || 'Une erreur réseau ou serveur est survenue.')
+      else if (result.role === 'parent') navigate('/parent')
+    } catch (err) {
+      SupabaseErrorHandler.handle(err)
     } finally {
       setIsLoading(false)
     }
@@ -110,7 +106,7 @@ function LoginPage() {
               "Le savoir est une lumière qui ne s'éteint jamais."
             </p>
             <p className="text-sm opacity-70 mt-6 tracking-widest uppercase">
-              A.M.D.G — Depuis 1948
+              S.C.D.J— Depuis 2017
             </p>
           </div>
           <div />
@@ -248,14 +244,14 @@ function LoginPage() {
               </div>
             )}
 
-            {role === 'student' && (
+            {role === 'parent' && (
               <div>
                 Pas encore inscrit ?{' '}
                 <Link
                   to="/inscription"
                   className="text-sacred-red font-semibold hover:underline"
                 >
-                  Créer un compte élève
+                  Créer un compte parent
                 </Link>
               </div>
             )}

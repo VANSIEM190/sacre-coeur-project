@@ -10,12 +10,12 @@ import {
 import { DashboardShell } from '@/components/Dashboard-shell'
 
 const studentNavItems = [
-  { to: '/student', label: 'Tableau de bord', icon: LayoutDashboard },
-  { to: '/student/annonces', label: 'Annonces', icon: Megaphone },
-  { to: '/student/cours', label: 'Cours', icon: BookOpen },
-  { to: '/student/horaires', label: 'Horaires', icon: CalendarDays },
-  { to: '/student/points', label: 'Points & Bulletins', icon: Award },
-  { to: '/student/paiements', label: 'Reçus', icon: CreditCard },
+  { to: '/parent', label: 'Tableau de bord', icon: LayoutDashboard },
+  { to: '/parent/annonces', label: 'Annonces', icon: Megaphone },
+  { to: '/parent/cours', label: 'Cours', icon: BookOpen },
+  { to: '/parent/horaires', label: 'Horaires', icon: CalendarDays },
+  { to: '/parent/points', label: 'Points & Bulletins', icon: Award },
+  { to: '/parent/paiements', label: 'Reçus', icon: CreditCard },
 ]
 
 function StudentLayout() {

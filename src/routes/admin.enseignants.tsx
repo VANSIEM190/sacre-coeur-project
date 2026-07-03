@@ -1,10 +1,10 @@
 import { useState } from 'react'
-import { PageHeader } from '@/components/dashboard-shell'
+import { PageHeader } from '@/components/Dashboard-shell'
 import { useAuthStore } from '@/stores/auth-store'
 import type { TeacherUser } from '@/lib/types'
 import { Plus, Trash2, Copy, Loader2, Edit3, X } from 'lucide-react'
-import { SupabaseErrorHandler } from '@/services/SupabaseErrorHandler'
-import { classService } from '@/services/classServices'
+import { SupabaseErrorHandler } from '@/services/core/Supabase.error.handler'
+import { classService } from '@/services/classe/classe.service'
 import { useFetchData, useMutateData } from '@/hooks/useQuery'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
@@ -40,7 +40,7 @@ function AdminTeachers() {
     (newTeacher: {
       fullName: string
       email: string
-      assignedClassIds: string[]
+      assignedclasses: string[]
     }) => createTeacher(newTeacher),
     {
       onSuccess: () => {
@@ -79,7 +79,7 @@ function AdminTeachers() {
     createTeacherMutation.mutate({
       fullName: name,
       email: email,
-      assignedClassIds: selectedClasses,
+      assignedclasses: selectedClasses,
     })
   }
 
@@ -93,7 +93,7 @@ function AdminTeachers() {
   const handleManageClasses = (teacher: TeacherUser) => {
     setEditingTeacher(teacher)
     // Comme ton service renvoie déjà le tableau d'IDs dansassignedClassNames, on l'injecte directement
-    setModalSelectedClasses(teacher.assignedClassNames || [])
+    setModalSelectedClasses(teacher.assignedclasses || [])
     setIsModalOpen(true)
   }
 
@@ -197,7 +197,7 @@ function AdminTeachers() {
           console.log(t)
           // LOGIQUE CORRIGÉE : Filtrer les classes globales dont l'ID est inclus dans les classes du prof
           const teacherClasses = classesData.filter(cls =>
-            t.assignedClassNames?.includes(cls.id)
+            t.assignedclasses.includes(cls.id)
           )
 
           return (

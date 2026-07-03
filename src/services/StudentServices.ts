@@ -1,6 +1,6 @@
 // @/services/studentService.ts
 import { supabase } from '@/supabase/supabaseClient'
-import { SupabaseErrorHandler } from './SupabaseErrorHandler'
+import { SupabaseErrorHandler } from './core/Supabase.error.handler'
 import type { SchoolClassName } from '@/lib/types'
 
 export interface RegisterStudentInput {

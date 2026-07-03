@@ -7,7 +7,7 @@ class HorraireServices {
       .from('schedule_entries')
       .select('*')
       .eq('classe_id', classeId)
-      .order('start_time', { ascending: true })
+      .order('startTime', { ascending: true })
 
     if (error) throw new Error(error.message)
 
@@ -15,8 +15,8 @@ class HorraireServices {
       id: entry.id,
       classe_id: entry.classe_id,
       dayOfWeek: entry.dayOfWeek,
-      startTime: entry.start_time.slice(0, 5),
-      endTime: entry.end_time.slice(0, 5),
+      startTime: entry.startTime.slice(0, 5),
+      endTime: entry.endTime.slice(0, 5),
       subject: entry.subject,
       room: entry.room,
       teacherName: entry.teacherName,
@@ -25,16 +25,16 @@ class HorraireServices {
   }
 
   async createScheduleEntry(
-    entry: Omit<ScheduleEntry, 'id'>
+    entry: Omit<ScheduleEntry, 'id' | 'created_at'>
   ): Promise<ScheduleEntry> {
     const { data, error } = await supabase
       .from('schedule_entries')
       .insert([
         {
           classe_id: entry.classe_id,
-          day_of_week: entry.dayOfWeek,
-          start_time: entry.startTime,
-          end_time: entry.endTime,
+          dayOfWeek: entry.dayOfWeek,
+          startTime: entry.startTime,
+          endTime: entry.endTime,
           subject: entry.subject,
           room: entry.room,
           teacherName: entry.teacherName,
@@ -48,9 +48,9 @@ class HorraireServices {
     return {
       id: data.id,
       classe_id: data.classe_id,
-      dayOfWeek: data.day_of_week,
-      startTime: data.start_time.slice(0, 5),
-      endTime: data.end_time.slice(0, 5),
+      dayOfWeek: data.dayOfWeek,
+      startTime: data.startTime.slice(0, 5),
+      endTime: data.endTime.slice(0, 5),
       subject: data.subject,
       room: data.room,
       teacherName: data.teacher,
@@ -63,13 +63,14 @@ class HorraireServices {
     updates: Partial<Omit<ScheduleEntry, 'id' | 'classe_id' | 'created_at'>>
   ): Promise<ScheduleEntry> {
     // Reconstruction de l'objet avec le format de la base de données (snake_case)
-    const payload: any = {}
-    if (updates.dayOfWeek) payload.day_of_week = updates.dayOfWeek
-    if (updates.startTime) payload.start_time = updates.startTime
-    if (updates.endTime) payload.end_time = updates.endTime
-    if (updates.subject) payload.subject = updates.subject
-    if (updates.room) payload.room = updates.room
-    if (updates.teacherName) payload.teacher = updates.teacherName
+    const payload = {
+      dayOfWeek: updates.dayOfWeek,
+      startTime: updates.startTime,
+      endTime: updates.endTime,
+      subject: updates.subject,
+      room: updates.room,
+      teacherName: updates.teacherName,
+    }
 
     const { data, error } = await supabase
       .from('schedule_entries')
@@ -89,9 +90,9 @@ class HorraireServices {
     return {
       id: data.id,
       classe_id: data.classe_id,
-      dayOfWeek: data.day_of_week,
-      startTime: data.start_time.slice(0, 5),
-      endTime: data.end_time.slice(0, 5),
+      dayOfWeek: data.dayOfWeek,
+      startTime: data.startTime.slice(0, 5),
+      endTime: data.endTime.slice(0, 5),
       subject: data.subject,
       room: data.room,
       teacherName: data.teacher,

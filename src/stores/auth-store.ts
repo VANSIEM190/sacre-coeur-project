@@ -1,19 +1,18 @@
-// @/stores/auth-store.ts
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import type { AnyUser, RegisterParentUser, TeacherUser } from '@/lib/types'
-// IMPORTATION DES SERVICES SUPABASE
+
+// IMPORTATION DES SERVICES CENTRALISÉS
 import {
   parentService,
   type RegisterParentInput,
-} from '@/services/ParentServices'
-import { authServices, type UserRole } from '@/services/AuthServices'
-import { teacherServices } from '@/services/TeacherServices'
-import { supabase } from '@/supabase/supabaseClient'
+} from '@/services/parent/parent.service'
+import { authService, type UserRole } from '@/services/auth/auth.service'
+import { teacherService } from '@/services/teacher/teacher.service'
 
 interface AuthState {
   currentUser: AnyUser | null
-  registeredUsers: AnyUser[]
+  registeredUsers: Omit<AnyUser, 'password'>[] // Sécurité : On exclut le mot de passe du store
   theme: 'light' | 'dark'
 
   login: (
@@ -24,7 +23,7 @@ interface AuthState {
   registerParent: (
     data: Omit<
       RegisterParentUser,
-      'id' | 'role' | 'isValidatedByAdmin' | 'createdAt'
+      'id' | 'role' | 'isValidatedByAdmin' | 'createdAt' | 'password'
     > & { password?: string }
   ) => Promise<{ ok: boolean; error?: string }>
 
@@ -33,7 +32,6 @@ interface AuthState {
   ) => Promise<{ ok: boolean; error?: string }>
 
   removeUser: (id: string) => void
-
   logout: () => Promise<void>
   setTheme: (theme: 'light' | 'dark') => void
   toggleTheme: () => void
@@ -43,10 +41,8 @@ export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
       currentUser: null,
-      registeredUsers: [] as AnyUser[],
+      registeredUsers: [],
       theme: 'light',
-
-      // Extrait mis à jour de ton @/stores/auth-store.ts
 
       login: async (email, password) => {
         try {
@@ -54,8 +50,8 @@ export const useAuthStore = create<AuthState>()(
             return { ok: false, error: 'Veuillez remplir tous les champs.' }
           }
 
-          // 1. Appel au service d'authentification centralisé (Auth + Rôle depuis profiles)
-          const { user, role } = await authServices.login(email, password)
+          // 1. Authentification globale et récupération du rôle
+          const { user, role } = await authService.login(email, password)
 
           if (!user) {
             return {
@@ -64,7 +60,7 @@ export const useAuthStore = create<AuthState>()(
             }
           }
 
-          // Base de la session utilisateur pour l'état global
+          // Construction de la session de base
           let userSession: AnyUser = {
             id: user.id,
             email: user.email ?? email,
@@ -73,50 +69,38 @@ export const useAuthStore = create<AuthState>()(
             createdAt: user.created_at,
           } as AnyUser
 
-          // 2. SI L'UTILISATEUR EST UN ENSEIGNANT : On va chercher ses détails par son EMAIL
+          // 2. Si Enseignant : Récupération des détails via le Service dédié (Pas d'appel direct Supabase ici)
           if (role === 'teacher') {
-            const { data: teacherData, error: teacherError } = await supabase
-              .from('enseignants_details')
-              .select('*')
-              .eq('email', user.email ?? email) // Liaison logique par l'email !
-              .maybeSingle() // On utilise maybeSingle pour éviter de crash s'il n'a pas encore de fiche
+            try {
+              const teacherData = await teacherService.getDetailsByEmail(
+                user.email ?? email
+              )
 
-            if (teacherError) {
+              if (teacherData) {
+                userSession = {
+                  ...userSession,
+                  fullName: teacherData.fullName || userSession.fullName,
+                  teacherAccessId: teacherData.teacherAccessId,
+                  assignedclasses: teacherData.assignedclasses || [],
+                } as TeacherUser
+              }
+            } catch (teacherError) {
               console.error(
-                'Erreur récupération détails enseignant:',
+                'Erreur détails enseignant lors du login:',
                 teacherError
               )
             }
-
-            if (teacherData) {
-              // On enrichit la session utilisateur avec ses données de prof issues de enseignants_details
-              userSession = {
-                ...userSession,
-                fullName: teacherData.fullName || userSession.fullName,
-                teacherAccessId: teacherData.matriculeEnseignant,
-                assignedClassNames: teacherData.assignedclasses || [],
-              } as TeacherUser
-            }
           }
 
-          // 3. SI L'UTILISATEUR EST UN ÉLÈVE : (Optionnel, même logique si besoin)
-          if (role === 'student') {
-            // Tu pourras faire la même chose ici avec la table eleves_details si nécessaire
-          }
-
-          // Mise à jour de l'état global Zustand
           set({ currentUser: userSession })
-
           return { ok: true, role }
         } catch (err: unknown) {
-          const errorMessage =
-            err instanceof Error
-              ? err.message
-              : 'Une erreur est survenue lors de la connexion.'
-
           return {
             ok: false,
-            error: errorMessage,
+            error:
+              err instanceof Error
+                ? err.message
+                : 'Une erreur est survenue lors de la connexion.',
           }
         }
       },
@@ -131,24 +115,23 @@ export const useAuthStore = create<AuthState>()(
           }
 
           const registerInput: RegisterParentInput = {
-            ...data,
-            password: data.password,
-            middleName: data.middleName ?? null,
-          }
-
-          const supabaseUser = await parentService.register(registerInput)
-
-          if (!supabaseUser) {
-            return {
-              ok: false,
-              error: "L'utilisateur n'a pas pu être créé côté serveur.",
-            }
-          }
-
-          const newStudent: RegisterParentUser = {
-            id: supabaseUser.id,
             email: data.email,
             password: data.password,
+            lastName: data.lastName,
+            middleName: data.middleName ?? null,
+            firstName: data.firstName,
+            guardianRelation: data.guardianRelation,
+            profession: data.profession,
+            phone: data.phone,
+          }
+
+          // Appel au service (qui gère en interne la création auth et l'insertion dans la table parents)
+          await parentService.register(registerInput)
+
+          // Sécurité : On crée l'objet sans le champ password pour le state local
+          const newParentRecord: Omit<RegisterParentUser, 'password'> = {
+            id: crypto.randomUUID(), // Identifiant temporaire visuel pour la liste locale ou rechargé au prochain fetch
+            email: data.email,
             role: 'parent',
             fullName: `${data.firstName} ${data.lastName}`.trim(),
             createdAt: new Date().toISOString(),
@@ -160,34 +143,37 @@ export const useAuthStore = create<AuthState>()(
             phone: data.phone,
           }
 
-          set({ registeredUsers: [...get().registeredUsers, newStudent] })
-
+          set({
+            registeredUsers: [
+              ...get().registeredUsers,
+              newParentRecord as AnyUser,
+            ],
+          })
           return { ok: true }
         } catch (err) {
-          const errorMessage =
-            err instanceof Error
-              ? err.message
-              : "Une erreur est survenue lors de l'inscription."
-
-          return { ok: false, error: errorMessage }
+          return {
+            ok: false,
+            error:
+              err instanceof Error
+                ? err.message
+                : "Une erreur est survenue lors de l'inscription.",
+          }
         }
       },
 
       createTeacher: async teacherData => {
         try {
-          const newTeacher = await teacherServices.register(teacherData)
+          const newTeacher = await teacherService.register(teacherData)
 
           set({ registeredUsers: [...get().registeredUsers, newTeacher] })
-
           return { ok: true }
         } catch (err) {
-          const errorMessage =
-            err instanceof Error
-              ? err.message
-              : "Erreur lors de la création de l'enseignant."
           return {
             ok: false,
-            error: errorMessage,
+            error:
+              err instanceof Error
+                ? err.message
+                : "Erreur lors de la création de l'enseignant.",
           }
         }
       },
@@ -200,7 +186,7 @@ export const useAuthStore = create<AuthState>()(
 
       logout: async () => {
         try {
-          await authServices.logout()
+          await authService.logout()
         } catch (error) {
           console.error('Erreur durant le logout global:', error)
         } finally {

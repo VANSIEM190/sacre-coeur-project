@@ -95,7 +95,7 @@ export class SupabaseErrorHandler {
   /**
    * Traitement spécifique des erreurs PostgreSQL & PostgREST
    */
-  private static handleDatabaseError(error: PostgrestError | any): string {
+  private static handleDatabaseError(error: PostgrestError): string {
     const code = error.code
     const details = error.details?.toLowerCase() || ''
     const message = error.message?.toLowerCase() || ''

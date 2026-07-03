@@ -172,7 +172,7 @@ function InscriptionParentPage() {
                   disabled={isSubmitting}
                   className="px-8 py-3.5 rounded-full bg-sacred-red text-white font-semibold shadow-lg shadow-sacred-red/20 hover:scale-105 transition-transform disabled:opacity-50"
                 >
-                  {isSubmitting ? 'Envoi…' : 'Créer mon compte tuteur'}
+                  {isSubmitting ? 'Envoi…' : 'Créer'}
                 </button>
               </div>
             </Form>
