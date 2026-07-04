@@ -11,7 +11,7 @@ import {
   Download,
 } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
-import { adminArchivesServices } from '@/services/AdminArchivesServices'
+import { adminArchivesServices } from '@/services/archive/archive.service'
 import type {
   ArchiveDocument,
   ArchiveDocumentInput,

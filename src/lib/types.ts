@@ -1,5 +1,12 @@
 // Domain types — SRP, explicit naming
 export type UserRole = 'admin' | 'teacher' | 'student' | 'parent'
+export type Day =
+  | 'Lundi'
+  | 'Mardi'
+  | 'Mercredi'
+  | 'Jeudi'
+  | 'Vendredi'
+  | 'Samedi'
 
 export interface ClassName {
   id: string
@@ -85,7 +92,7 @@ export interface Announcement {
   id: string
   title: string
   body: string
-  authorId: string
+  author: string
   targetClassNames: SchoolClassName[] | 'all'
   createdAt: string
   updatedAt: string
@@ -103,7 +110,7 @@ export interface Course {
 export interface ScheduleEntry {
   id: string
   // className: string
-  dayOfWeek: 'Lundi' | 'Mardi' | 'Mercredi' | 'Jeudi' | 'Vendredi' | 'Samedi'
+  dayOfWeek: Day
   startTime: string
   endTime: string
   subject: string
