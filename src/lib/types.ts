@@ -93,7 +93,7 @@ export interface Announcement {
   title: string
   body: string
   author: string
-  targetClassNames: SchoolClassName[] | 'all'
+  targetClassNames: string
   createdAt: string
   updatedAt: string
 }

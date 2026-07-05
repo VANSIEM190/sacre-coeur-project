@@ -1,6 +1,13 @@
 import type { ScheduleEntry } from '@/lib/types'
 import { supabase } from '@/supabase/supabaseClient'
 
+type UpdatePayload = Partial<
+  Pick<
+    ScheduleEntry,
+    'dayOfWeek' | 'startTime' | 'endTime' | 'subject' | 'room' | 'teacherName'
+  >
+>
+
 class HorraireServices {
   async getSchedule(classeId: string): Promise<ScheduleEntry[]> {
     if (!classeId) throw new Error("L'identifiant de la classe est requis.")
@@ -76,27 +83,12 @@ class HorraireServices {
   ): Promise<ScheduleEntry> {
     if (!id) throw new Error("L'identifiant de la période est requis.")
 
-    type UpdatePayload = Partial<
-      Pick<
-        ScheduleEntry,
-        | 'dayOfWeek'
-        | 'startTime'
-        | 'endTime'
-        | 'subject'
-        | 'room'
-        | 'teacherName'
-      >
-    >
-
     const payload: UpdatePayload = {}
-
-    if (updates.dayOfWeek !== undefined) payload.dayOfWeek = updates.dayOfWeek
-    if (updates.startTime !== undefined) payload.startTime = updates.startTime
-    if (updates.endTime !== undefined) payload.endTime = updates.endTime
-    if (updates.subject !== undefined) payload.subject = updates.subject
-    if (updates.room !== undefined) payload.room = updates.room
-    if (updates.teacherName !== undefined)
-      payload.teacherName = updates.teacherName
+    const cleanUpdates = Object.fromEntries(
+      Object.entries(updates).filter(([, value]) => value !== undefined)
+    )
+    // On fusionne proprement dans le payload
+    Object.assign(payload, cleanUpdates)
 
     const { data, error } = await supabase
       .from('schedule_entries')
@@ -132,7 +124,6 @@ class HorraireServices {
       .eq('id', id)
 
     if (error) {
-      console.error('[Erreur Sécurisée] deleteScheduleEntry:', error.message)
       throw new Error('Échec de la suppression de la période.')
     }
 

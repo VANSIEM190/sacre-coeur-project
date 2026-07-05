@@ -24,6 +24,10 @@ class AnnouncementService {
   async createAnnouncement(
     announcement: Omit<Announcement, 'id' | 'createdAt' | 'updatedAt'>
   ): Promise<Announcement> {
+    if (Object.keys(announcement).length === 0) {
+      throw new Error('aucun donnée renseigné renseigné ')
+    }
+
     const { data, error } = await supabase
       .from('announcements')
       .insert([
@@ -37,7 +41,9 @@ class AnnouncementService {
       .select()
       .single()
 
-    if (error) throw new Error(error.message)
+    if (error) {
+      throw new Error('Échec de la création de la période.')
+    }
 
     return {
       id: data.id,
@@ -50,23 +56,34 @@ class AnnouncementService {
     }
   }
 
-  async updateScheduleEntry(
+  async updateAnnouncement(
     id: string,
     updates: Partial<Omit<Announcement, 'id' | 'createdAt' | 'updateAt'>>
   ): Promise<Announcement> {
-    // Reconstruction de l'objet avec le format de la base de données (snake_case)
-    const payload = {
-      dayOfWeek: updates.dayOfWeek,
-      startTime: updates.startTime,
-      endTime: updates.endTime,
-      subject: updates.subject,
-      room: updates.room,
-      teacherName: updates.teacherName,
-    }
+    if (!id) throw new Error("L'identifiant de la période est requis.")
+
+    type UpdateValueClean = NonNullable<(typeof updates)[keyof typeof updates]>
+    const allowedKeys: Array<keyof typeof updates> = [
+      'title',
+      'body',
+      'targetClassNames',
+      'author',
+    ]
+    const cleanUpdates = Object.fromEntries(
+      Object.entries(updates).filter(
+        (entry): entry is [string, UpdateValueClean] => {
+          const [key, value] = entry
+
+          const isAllowed = allowedKeys.includes(key as keyof typeof updates)
+
+          return isAllowed && value !== undefined
+        }
+      )
+    )
 
     const { data, error } = await supabase
-      .from('schedule_entries')
-      .update(payload)
+      .from('announcements')
+      .update(cleanUpdates)
       .eq('id', id)
       .select()
       .single()
@@ -76,33 +93,25 @@ class AnnouncementService {
         'Erreur lors de la mise à jour de la période:',
         error.message
       )
-      throw new Error(error.message)
+      throw new Error('Erreur lors de la mise à jour')
     }
 
     return {
       id: data.id,
-      classe_id: data.classe_id,
-      dayOfWeek: data.dayOfWeek,
-      startTime: data.startTime.slice(0, 5),
-      endTime: data.endTime.slice(0, 5),
-      subject: data.subject,
-      room: data.room,
-      teacherName: data.teacher,
-      created_at: data.created_at,
+      title: data.title,
+      body: data.body,
+      targetClassNames: data.targetClassNames,
+      author: data.author,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at,
     }
   }
 
-  async deleteScheduleEntry(id: string): Promise<boolean> {
-    const { error } = await supabase
-      .from('schedule_entries')
-      .delete()
-      .eq('id', id)
+  async deleteAnnouncement(id: string): Promise<boolean> {
+    if (!id) throw new Error("L'identifiant de la période est requis.")
 
+    const { error } = await supabase.from('announcements').delete().eq('id', id)
     if (error) {
-      console.error(
-        'Erreur lors de la suppression de la période:',
-        error.message
-      )
       throw new Error(error.message)
     }
 

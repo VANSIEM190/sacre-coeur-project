@@ -1,21 +1,63 @@
 import { useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { Plus, Trash2, Pencil, Search } from 'lucide-react'
 import { PageHeader } from '@/components/Dashboard-shell'
-import { useSchoolStore } from '@/stores/school-store'
 import { useAuthStore } from '@/stores/auth-store'
 import { ALL_CLASS_NAMES } from '@/lib/mock-seed'
-import type { SchoolClassName } from '@/lib/types'
+import type { SchoolClassName, Announcement } from '@/lib/types'
+import { announcementService } from '@/services/announcement/announcement.service'
+import { useFetchData, useMutateData } from '@/hooks/useQuery'
+import { filterElement } from '@/utils/filterElements'
+import { classService } from '@/services/classe/classe.service'
 
 function AdminAnnonces() {
-  const announcements = useSchoolStore(s => s.announcements)
-  const create = useSchoolStore(s => s.createAnnouncement)
-  const update = useSchoolStore(s => s.updateAnnouncement)
-  const remove = useSchoolStore(s => s.deleteAnnouncement)
+  const queryClient = useQueryClient()
   const admin = useAuthStore(s => s.currentUser)
 
+  const { data: classes = [] } = useFetchData(
+    ['studentClasses'],
+    classService.getAllClasses
+  )
+
+  const { data: announcements = [] } = useFetchData<Announcement[]>(
+    ['announcements'],
+    () => announcementService.getAnnouncement()
+  )
+
+  const createMutation = useMutateData(
+    (newAnnouncement: Omit<Announcement, 'id' | 'createdAt' | 'updatedAt'>) =>
+      announcementService.createAnnouncement(newAnnouncement),
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['announcements'] })
+        reset()
+      },
+    }
+  )
+
+  const updateMutation = useMutateData(
+    ({ id, payload }: { id: string; payload: Partial<Announcement> }) =>
+      announcementService.updateAnnouncement(id, payload),
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['announcements'] })
+        reset()
+      },
+    }
+  )
+
+  const deleteMutation = useMutateData(
+    (id: string) => announcementService.deleteAnnouncement(id),
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['announcements'] })
+      },
+    }
+  )
+
+  // États locaux de formulaire
   const [editing, setEditing] = useState<string | null>(null)
   const [title, setTitle] = useState('')
-  const [author, setAuthor] = useState('')
   const [body, setBody] = useState('')
   const [target, setTarget] = useState<'all' | SchoolClassName>('all')
 
@@ -32,40 +74,42 @@ function AdminAnnonces() {
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!admin) return
-    const payload = {
-      title,
-      body,
-      authorId: admin.id,
-      targetClassNames: target === 'all' ? ('all' as const) : [target],
+
+    if (!admin) {
+      alert('Action non autorisée.')
+      return
     }
-    if (editing) update(editing, payload)
-    else create(payload)
-    reset()
+    if (!title.trim() || !body.trim()) return
+
+    const payload = {
+      title: title.trim(),
+      body: body.trim(),
+      author: "Administration de l'école",
+      targetClassNames: target,
+    }
+
+    if (editing) {
+      updateMutation.mutate({ id: editing, payload })
+    } else {
+      createMutation.mutate(payload)
+    }
   }
 
-  // Filtrage et recherche sécurisés des annonces
-  const filteredAnnouncements = announcements.filter(a => {
-    // 1. Filtrage par classe cible
-    if (filterClass !== 'all') {
-      if (
-        a.targetClassNames !== 'all' &&
-        !a.targetClassNames.includes(filterClass)
-      ) {
-        return false
-      }
-    }
-
-    // 2. Filtrage par barre de recherche (titre ou message)
-    if (searchQuery.trim() !== '') {
-      const query = searchQuery.toLowerCase().trim()
-      const matchesTitle = a.title?.toLowerCase().includes(query) ?? false
-      const matchesBody = a.body?.toLowerCase().includes(query) ?? false
-      if (!matchesTitle && !matchesBody) return false
-    }
-
-    return true
+  const filteredAnnouncements = filterElement<Announcement>({
+    items: announcements,
+    keys: ['title', 'body'],
+    searchQuery: searchQuery,
+    selectKey: 'targetClassNames',
+    selectedValue: filterClass === 'all' ? 'Tous' : filterClass,
   })
+
+  if (!admin) {
+    return (
+      <div className="p-6 text-center text-destructive">
+        Accès restreint. Veuillez vous connecter.
+      </div>
+    )
+  }
 
   return (
     <div>
@@ -103,26 +147,27 @@ function AdminAnnonces() {
             className="w-full px-4 py-3 rounded-xl border border-border bg-background"
           >
             <option value="all">Toutes les classes</option>
-            {ALL_CLASS_NAMES.map(c => (
-              <option key={c} value={c}>
-                {c}
+            {classes.map(c => (
+              <option key={c.id} value={c.nom_classe}>
+                {c.nom_classe}
               </option>
             ))}
           </select>
+          {/* SÉCURITÉ : Suppression du champ input d'auteur modifiable manuellement pour éliminer l'usurpation d'identité */}
           <input
-            value={author}
-            onChange={e => setAuthor(e.target.value)}
-            required
-            placeholder="auteur de l'annonce"
-            className="w-full px-4 py-3 rounded-xl border border-border bg-background"
+            value={`Auteur : Vous`}
+            disabled
+            className="w-full px-4 py-3 rounded-xl border border-border bg-muted text-muted-foreground cursor-not-allowed"
           />
         </div>
         <div className="flex gap-3">
           <button
             type="submit"
-            className="px-5 py-2.5 rounded-full bg-sacred-red text-white font-semibold flex items-center gap-2"
+            disabled={createMutation.isPending || updateMutation.isPending}
+            className="px-5 py-2.5 rounded-full bg-sacred-red text-white font-semibold flex items-center gap-2 disabled:opacity-50"
           >
-            <Plus className="size-4" /> {editing ? 'Mettre à jour' : 'Publier'}
+            <Plus className="size-4" />
+            {editing ? 'Mettre à jour' : 'Publier'}
           </button>
           {editing && (
             <button
@@ -182,8 +227,11 @@ function AdminAnnonces() {
                 <p className="text-xs opacity-50 mt-2">
                   {a.targetClassNames === 'all'
                     ? 'Toutes classes'
-                    : a.targetClassNames.join(', ')}{' '}
-                  · {new Date(a.createdAt).toLocaleString('fr-FR')}
+                    : Array.isArray(a.targetClassNames)
+                      ? a.targetClassNames.join(', ')
+                      : a.targetClassNames}{' '}
+                  · Par : {a.author} ·{' '}
+                  {new Date(a.createdAt).toLocaleString('fr-FR')}
                 </p>
               </div>
               <div className="flex gap-2 shrink-0">
@@ -193,7 +241,8 @@ function AdminAnnonces() {
                     setTitle(a.title)
                     setBody(a.body)
                     setTarget(
-                      a.targetClassNames === 'all'
+                      a.targetClassNames === 'all' ||
+                        !Array.isArray(a.targetClassNames)
                         ? 'all'
                         : a.targetClassNames[0]
                     )
@@ -203,8 +252,15 @@ function AdminAnnonces() {
                   <Pencil className="size-4" />
                 </button>
                 <button
-                  onClick={() => remove(a.id)}
-                  className="size-9 rounded-full border border-border grid place-items-center hover:bg-destructive hover:text-destructive-foreground"
+                  onClick={() => {
+                    if (
+                      confirm('Voulez-vous vraiment supprimer cette annonce ?')
+                    ) {
+                      deleteMutation.mutate(a.id)
+                    }
+                  }}
+                  disabled={deleteMutation.isPending}
+                  className="size-9 rounded-full border border-border grid place-items-center hover:bg-destructive hover:text-destructive-foreground disabled:opacity-50"
                 >
                   <Trash2 className="size-4" />
                 </button>
