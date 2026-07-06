@@ -1,4 +1,4 @@
-import { PageHeader } from '@/components/dashboard-shell'
+import { PageHeader } from '@/components/Dashboard-shell'
 import { useState, useMemo } from 'react'
 import {
   Plus,
@@ -173,6 +173,35 @@ function AdminArchives() {
         subtitle="Coffre-fort numérique des documents de l'école."
       />
 
+      {/* Zone de Filtrage & Recherche */}
+      <div className="p-5 rounded-3xl bg-card border border-border mb-6 space-y-4">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 size-4 opacity-50" />
+            <input
+              type="text"
+              placeholder="Rechercher une archive par titre, année, description..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="w-full pl-11 pr-4 py-2.5 rounded-xl border border-border bg-background focus:outline-none focus:border-primary text-sm"
+            />
+          </div>
+
+          <select
+            value={selectedCategoryFilter}
+            onChange={e => setSelectedCategoryFilter(e.target.value)}
+            className="px-4 py-2.5 rounded-xl border border-border bg-background focus:outline-none focus:border-primary text-sm min-w-40"
+          >
+            <option value="Tous">Toutes les catégories</option>
+            {['Palmarès', 'Bulletin', 'Procès-Verbal', 'Autre'].map(c => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
       {/* Formulaire d'ajout */}
       <form
         onSubmit={handleCreateSubmit}
@@ -242,35 +271,6 @@ function AdminArchives() {
           {createMutation.isPending ? 'Archivage en cours...' : 'Archiver'}
         </button>
       </form>
-
-      {/* Zone de Filtrage & Recherche */}
-      <div className="p-5 rounded-3xl bg-card border border-border mb-6 space-y-4">
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 size-4 opacity-50" />
-            <input
-              type="text"
-              placeholder="Rechercher une archive par titre, année, description..."
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              className="w-full pl-11 pr-4 py-2.5 rounded-xl border border-border bg-background focus:outline-none focus:border-primary text-sm"
-            />
-          </div>
-
-          <select
-            value={selectedCategoryFilter}
-            onChange={e => setSelectedCategoryFilter(e.target.value)}
-            className="px-4 py-2.5 rounded-xl border border-border bg-background focus:outline-none focus:border-primary text-sm min-w-40"
-          >
-            <option value="Tous">Toutes les catégories</option>
-            {['Palmarès', 'Bulletin', 'Procès-Verbal', 'Autre'].map(c => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
 
       {/* Liste des archives avec gestion des états asynchrones globaux */}
       {isLoading && (

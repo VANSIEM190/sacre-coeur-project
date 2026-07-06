@@ -102,14 +102,13 @@ export interface Course {
   id: string
   title: string
   description: string
-  className: SchoolClassName
-  pdfUrl?: string
+  className: string
+  pdfUrl: string
   uploadedAt: string
 }
 
 export interface ScheduleEntry {
   id: string
-  // className: string
   dayOfWeek: Day
   startTime: string
   endTime: string

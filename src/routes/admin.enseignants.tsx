@@ -197,7 +197,7 @@ function AdminTeachers() {
           console.log(t)
           // LOGIQUE CORRIGÉE : Filtrer les classes globales dont l'ID est inclus dans les classes du prof
           const teacherClasses = classesData.filter(cls =>
-            t.assignedclasses.includes(cls.id)
+            t.assignedClassNames?.includes(cls.id)
           )
 
           return (
