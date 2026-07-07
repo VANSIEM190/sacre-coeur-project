@@ -10,7 +10,7 @@ class AdminCoursesServices {
     const { data, error } = await supabase
       .from('courses')
       .select('*')
-      .order('uploaded_at', { ascending: false })
+      .order('uploadedat', { ascending: false })
 
     if (error) throw error
     return data || []
@@ -45,7 +45,7 @@ class AdminCoursesServices {
         .insert({
           title: values.title,
           description: values.description,
-          className: values.className,
+          class_id: values.class_id,
           pdfUrl: storageData.path,
         })
         .select('id')
@@ -76,7 +76,7 @@ class AdminCoursesServices {
     const updateData: Omit<Partial<Course>, 'pdfUrl'> & { pdfUrl?: string } = {
       title: values.title,
       description: values.description,
-      className: values.className,
+      class_id: values.class_id,
     }
 
     let newFilePath: string | null = null

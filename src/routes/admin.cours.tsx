@@ -1,6 +1,5 @@
 import { PageHeader } from '@/components/Dashboard-shell'
 import { useState, useRef } from 'react'
-import type { SchoolClassName } from '@/lib/types'
 import { Plus, Trash2, Search, Filter } from 'lucide-react'
 import { classService } from '@/services/classe/classe.service'
 import { adminCoursesServices } from '@/services/course/course.service'
@@ -29,12 +28,13 @@ function AdminCours() {
     ['studentClasses'],
     classService.getAllClasses
   )
+  console.log(cls)
 
   const filteredCourses = filterElement({
     items: serverCourses,
     keys: ['title', 'description'],
     searchQuery: searchQuery,
-    selectKey: 'className',
+    selectKey: 'class_id',
     selectedValue: selectedClassFilter,
   })
 
@@ -49,7 +49,7 @@ function AdminCours() {
       await adminCoursesServices.createCourse({
         title,
         description: desc,
-        className: cls,
+        class_id: cls,
         pdfUrl: file,
       })
 
@@ -135,11 +135,11 @@ function AdminCours() {
         <div className="flex items-center gap-2">
           <select
             value={cls}
-            onChange={e => setCls(e.target.value as SchoolClassName)}
+            onChange={e => setCls(e.target.value)}
             className="w-full px-4 py-3 rounded-xl border border-border bg-background"
           >
             {classes.map(c => (
-              <option key={c.id} value={c.nom_classe}>
+              <option key={c.id} value={c.id}>
                 {c.nom_classe}
               </option>
             ))}
@@ -175,7 +175,13 @@ function AdminCours() {
               <div>
                 <p className="font-semibold">{c.title}</p>
                 <p className="text-xs opacity-60">
-                  {c.className} · {c.description}
+                  {classes
+                    .filter(cls => cls.id === c.class_id)
+                    .map(rom => (
+                      <p className="text-xs opacity-60">
+                        {rom.nom_classe} · {c.description}{' '}
+                      </p>
+                    ))}
                 </p>
               </div>
               <button

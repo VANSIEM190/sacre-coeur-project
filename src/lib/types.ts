@@ -102,7 +102,7 @@ export interface Course {
   id: string
   title: string
   description: string
-  className: string
+  class_id: string
   pdfUrl: string
   uploadedAt: string
 }
