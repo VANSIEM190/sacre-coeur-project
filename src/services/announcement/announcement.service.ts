@@ -3,10 +3,16 @@ import { supabase } from '@/supabase/supabaseClient'
 
 class AnnouncementService {
   async getAnnouncement(): Promise<Announcement[]> {
+    // Calcul de la date d'il y a 3 semaines (21 jours)
+    const threeWeeksAgo = new Date()
+    threeWeeksAgo.setDate(threeWeeksAgo.getDate() - 21)
+    const filterDateStr = threeWeeksAgo.toISOString()
+
     const { data, error } = await supabase
       .from('announcements')
       .select('*')
-      .order('created_at', { ascending: true })
+      .gte('created_at', filterDateStr)
+      .order('created_at', { ascending: false })
 
     if (error) throw new Error(error.message)
 

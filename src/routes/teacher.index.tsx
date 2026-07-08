@@ -1,4 +1,4 @@
-import { PageHeader } from '@/components/dashboard-shell'
+import { PageHeader } from '@/components/Dashboard-shell'
 import { useAuthStore } from '@/stores/auth-store'
 import { useSchoolStore } from '@/stores/school-store'
 import { Users, CalendarDays, ClipboardList } from 'lucide-react'
@@ -8,9 +8,7 @@ function TeacherHome() {
   const teacher = useAuthStore(s => s.currentUser) as TeacherUser
   const schedule = useSchoolStore(s => s.schedule)
   const sheets = useSchoolStore(s => s.gradingSheets)
-  const mySchedule = schedule.filter(s =>
-    teacher?.assignedClassNames.includes(s.className)
-  )
+
   const mySheets = sheets.filter(s => s.teacherId === teacher?.id)
 
   return (
@@ -20,16 +18,8 @@ function TeacherHome() {
         subtitle="Votre espace enseignant."
       />
       <div className="grid sm:grid-cols-3 gap-4 mb-8">
-        <Stat
-          icon={Users}
-          label="Classes attribuées"
-          value={teacher?.assignedClassNames.length ?? 0}
-        />
-        <Stat
-          icon={CalendarDays}
-          label="Heures par semaine"
-          value={mySchedule.length}
-        />
+        <Stat icon={Users} label="Classes attribuées" value={0} />
+        <Stat icon={CalendarDays} label="Heures par semaine" value={2} />
         <Stat
           icon={ClipboardList}
           label="Fiches soumises"
@@ -39,14 +29,15 @@ function TeacherHome() {
       <div className="p-6 rounded-3xl bg-card border border-border">
         <h2 className="font-display text-2xl mb-4">Vos classes</h2>
         <div className="flex flex-wrap gap-2">
-          {teacher?.assignedClassNames.map(c => (
+          {/* {teacher?.assignedclasses.map(c => (
             <span
               key={c}
               className="px-4 py-2 rounded-full bg-sacred-red text-white text-sm font-semibold"
             >
               {c}
             </span>
-          ))}
+          ))} */}
+          salut
         </div>
       </div>
     </div>

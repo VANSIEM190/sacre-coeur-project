@@ -28,7 +28,6 @@ function AdminCours() {
     ['studentClasses'],
     classService.getAllClasses
   )
-  console.log(cls)
 
   const filteredCourses = filterElement({
     items: serverCourses,

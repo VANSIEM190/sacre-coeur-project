@@ -16,9 +16,9 @@ class TeacherService {
     try {
       const nanoid = customAlphabet(
         import.meta.env.VITE_ID_MATRICULE_TEACHER,
-        10
+        5
       )
-      const accessId = nanoid()
+      const accessId = `SC-T-${nanoid()}`.toUpperCase()
 
       const { data: teacherData, error: teacherError } = await supabase
         .from('enseignants_details')
@@ -72,9 +72,13 @@ class TeacherService {
         .from('enseignants_details')
         .select('id')
         .eq('email', email)
-        .eq('matriculeEnseignant', matricule)
+        .eq('teacherAccessId', matricule)
         .maybeSingle()
+      const { data: tea, error: teaError } = await supabase
+        .from('enseignants_details')
+        .select('*')
 
+      console.log(tea, teaError)
       if (teacherError) throw teacherError
       if (!teacher) {
         throw new Error(
@@ -92,7 +96,7 @@ class TeacherService {
       // On met à jour la table des détails de l'enseignant avec l'ID généré
       const { error: updateError } = await supabase
         .from('enseignants_details')
-        .update({ id: userId })
+        .update({ user_id: userId })
         .eq('email', email)
 
       if (updateError) throw updateError

@@ -23,9 +23,9 @@ import AdminValidations from './routes/admin.validations'
 
 import StudentLayout from './routes/student'
 import StudentHome from './routes/student.index'
-import StudentAnnonces from './routes/student.annonces'
-import StudentCours from './routes/student.cours'
-import StudentHoraires from './routes/student.horaires'
+import StudentAnnonces from './routes/parent.annonces'
+import StudentCours from './routes/parent.cours'
+import StudentHoraires from './routes/parent.horaires'
 import StudentPaiements from './routes/student.paiements'
 import StudentPoints from './routes/student.points'
 

@@ -7,10 +7,15 @@ const BUCKET_NAME = 'sacre-coeur-files-courses'
 
 class AdminCoursesServices {
   async getCourses(): Promise<Course[]> {
+    const threeWeeksAgo = new Date()
+    threeWeeksAgo.setDate(threeWeeksAgo.getDate() - 21)
+    const filterDateStr = threeWeeksAgo.toISOString()
+
     const { data, error } = await supabase
       .from('courses')
       .select('*')
-      .order('uploadedat', { ascending: false })
+      .gte('uploadedAt', filterDateStr)
+      .order('uploadedAt', { ascending: false })
 
     if (error) throw error
     return data || []

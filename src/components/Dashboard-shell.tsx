@@ -1,8 +1,8 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { LogOut, Moon, Sun, type LucideIcon } from 'lucide-react'
+import { LogOut, Moon, Sun, Menu, X, type LucideIcon } from 'lucide-react'
 import { useAuthStore } from '@/stores/auth-store'
-import { useEffect, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 
 export interface DashboardNavItem {
   to: string
@@ -30,6 +30,9 @@ export function DashboardShell({
   const toggleTheme = useAuthStore(s => s.toggleTheme)
   const pathname = useLocation().pathname
 
+  // État pour gérer l'ouverture de la sidebar sur mobile
+  const [isOpen, setIsOpen] = useState(false)
+
   useEffect(() => {
     if (!currentUser || currentUser.role !== requiredRole) {
       navigate('/login')
@@ -50,10 +53,41 @@ export function DashboardShell({
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex">
-      {/* Sidebar */}
-      <aside className="hidden lg:flex w-72 shrink-0 flex-col border-r border-border bg-card">
-        <div className="p-6 border-b border-border">
+    <div className="min-h-screen bg-background text-foreground flex flex-col lg:flex-row">
+      {/* --- TOPBAR MOBILE --- */}
+      <header className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-card border-b border-border px-4 flex items-center justify-between z-40">
+        <Link to="/" className="flex items-center gap-3">
+          <div className="size-8 bg-sacred-red rounded-full grid place-items-center shadow-lg shadow-sacred-red/20">
+            <div className="size-3 rounded-full border-2 border-sacred-gold" />
+          </div>
+          <p className="font-display text-md leading-tight">Sacré Cœur</p>
+        </Link>
+
+        <button
+          onClick={() => setIsOpen(!isOpen)}
+          className="p-2 rounded-xl bg-muted border border-border text-foreground hover:opacity-80 transition-opacity"
+          aria-label="Menu"
+        >
+          {isOpen ? <X className="size-5" /> : <Menu className="size-5" />}
+        </button>
+      </header>
+
+      {/* --- BACKDROP MOBILE --- */}
+      {isOpen && (
+        <div
+          onClick={() => setIsOpen(false)}
+          className="lg:hidden fixed inset-0 bg-background/60 backdrop-blur-sm z-45"
+        />
+      )}
+
+      {/* --- SIDEBAR RESPONSIVE & FIXED --- */}
+      <aside
+        className={`fixed h-screen top-0 bottom-0 left-0 w-72 flex flex-col border-r border-border bg-card z-50 transform transition-transform duration-300 
+          lg:translate-x-0 lg:sticky
+          ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+        `}
+      >
+        <div className="p-6 border-b border-border flex items-center justify-between">
           <Link to="/" className="flex items-center gap-3">
             <div className="size-9 bg-sacred-red rounded-full grid place-items-center shadow-lg shadow-sacred-red/20">
               <div className="size-3.5 rounded-full border-2 border-sacred-gold" />
@@ -65,6 +99,14 @@ export function DashboardShell({
               </p>
             </div>
           </Link>
+
+          {/* Bouton fermeture interne pour mobile */}
+          <button
+            onClick={() => setIsOpen(false)}
+            className="lg:hidden p-1.5 rounded-lg hover:bg-muted text-foreground/60"
+          >
+            <X className="size-5" />
+          </button>
         </div>
 
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
@@ -76,6 +118,7 @@ export function DashboardShell({
               <Link
                 key={item.to}
                 to={item.to}
+                onClick={() => setIsOpen(false)}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
                   active
                     ? 'bg-sacred-red text-white shadow-md shadow-sacred-red/20'
@@ -121,7 +164,8 @@ export function DashboardShell({
         </div>
       </aside>
 
-      <main className="flex-1 min-w-0 lg:pl-0 pt-14 lg:pt-0">
+      {/* --- CONTENT AREA AREA (Ajustement du padding top pour mobile) --- */}
+      <main className="flex-1 min-w-0 pt-16 lg:pt-0">
         <motion.div
           key={pathname}
           initial={{ opacity: 0, y: 8 }}
