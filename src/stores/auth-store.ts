@@ -164,7 +164,7 @@ export const useAuthStore = create<AuthState>()(
       createTeacher: async teacherData => {
         try {
           const newTeacher = await teacherService.register(teacherData)
-
+          console.log(newTeacher.assignedclasses)
           set({ registeredUsers: [...get().registeredUsers, newTeacher] })
           return { ok: true }
         } catch (err) {

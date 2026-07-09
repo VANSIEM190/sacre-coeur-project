@@ -15,34 +15,34 @@ function TeacherCotations() {
   const users = useAuthStore(s => s.registeredUsers)
   const submit = useSchoolStore(s => s.submitGradingSheet)
   const sheets = useSchoolStore(s => s.gradingSheets)
-  const [cls, setCls] = useState<SchoolClassName>(
-    teacher?.assignedClassNames[0] ?? '4ème Secondaire'
-  )
+  // const [cls, setCls] = useState<SchoolClassName>(
+  //   teacher?.assignedclasses[0] ?? '4ème Secondaire'
+  // )
   const [subject, setSubject] = useState('')
   const [tranche, setTranche] = useState<PaymentTranche>(1)
   const [scores, setScores] = useState<Record<string, number>>({})
 
-  const students = users.filter(
-    (u): u is StudentUser =>
-      u.role === 'student' && u.currentClassName === cls && u.isValidatedByAdmin
-  )
+  // const students = users.filter(
+  //   (u): u is StudentUser =>
+  //     u.role === 'student' && u.currentClassName === cls && u.isValidatedByAdmin
+  // )
 
-  const send = () => {
-    if (!teacher || !subject) return
-    submit({
-      teacherId: teacher.id,
-      className: cls,
-      subject,
-      tranche,
-      entries: students.map(s => ({
-        studentId: s.id,
-        score: scores[s.id] ?? 0,
-        maxScore: 20,
-      })),
-    })
-    setSubject('')
-    setScores({})
-  }
+  // const send = () => {
+  //   if (!teacher || !subject) return
+  //   submit({
+  //     teacherId: teacher.id,
+  //     className: cls,
+  //     subject,
+  //     tranche,
+  //     entries: students.map(s => ({
+  //       studentId: s.id,
+  //       score: scores[s.id] ?? 0,
+  //       maxScore: 20,
+  //     })),
+  //   })
+  //   setSubject('')
+  //   setScores({})
+  // }
 
   return (
     <div>
@@ -52,15 +52,15 @@ function TeacherCotations() {
       />
       <div className="p-6 rounded-3xl bg-card border border-border space-y-4 mb-8">
         <div className="grid sm:grid-cols-3 gap-3">
-          <select
+          {/* <select
             value={cls}
             onChange={e => setCls(e.target.value as SchoolClassName)}
             className="px-4 py-3 rounded-xl border border-border bg-background"
           >
-            {teacher?.assignedClassNames.map(c => (
+            {teacher?.assignedclasses.map(c => (
               <option key={c}>{c}</option>
             ))}
-          </select>
+          </select> */}
           <input
             placeholder="Matière"
             value={subject}
@@ -78,7 +78,7 @@ function TeacherCotations() {
           </select>
         </div>
         <div className="space-y-2">
-          {students.map(s => {
+          {/* {students.map(s => {
             const score = scores[s.id] ?? 0
             const percent = ((score / 20) * 100).toFixed(1)
             return (
@@ -109,10 +109,10 @@ function TeacherCotations() {
             <p className="text-sm opacity-60 text-center py-6">
               Aucun élève dans cette classe.
             </p>
-          )}
+          )} */}
         </div>
         <button
-          onClick={send}
+          // onClick={send}
           className="px-5 py-2.5 rounded-full bg-sacred-red text-white font-semibold flex items-center gap-2"
         >
           <Send className="size-4" /> Envoyer à l'admin
