@@ -1,7 +1,7 @@
 import { PageHeader } from '@/components/Dashboard-shell'
 import { useAuthStore } from '@/stores/auth-store'
 import { useSchoolStore } from '@/stores/school-store'
-import type { Announcement, StudentUser } from '@/lib/types'
+import type { Announcement, RegisterParentUser } from '@/lib/types'
 import { Megaphone, BookOpen, Award } from 'lucide-react'
 import { announcementService } from '@/services/announcement/announcement.service'
 import { useFetchData } from '@/hooks/useQuery'
@@ -21,7 +21,7 @@ function StudentHome() {
   const coursValides = filterByDate(serverCourses, 'uploadedAt')
   console.log(serverCourses)
 
-  const parent = useAuthStore(s => s.currentUser) as StudentUser
+  const parent = useAuthStore(s => s.currentUser) as RegisterParentUser
 
   const receipts = useSchoolStore(s => s.receipts).filter(
     r => r.studentId === parent?.id

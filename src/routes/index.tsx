@@ -13,6 +13,7 @@ import { PublicHeader } from '@/components/public-header'
 import { PublicFooter } from '@/components/public-footer'
 import schoolBuilding from '@/assets/imgAcc.jpg'
 import studentsGroup from '@/assets/students-group.jpg'
+import { useAuthStore } from '@/stores/auth-store'
 
 const faqs = [
   {
@@ -64,6 +65,7 @@ const fadeUp = {
 }
 
 function HomePage() {
+  const userIsAuth = useAuthStore(u => u.currentUser)
   useEffect(() => {
     document.title = 'Sacré Cœur de Jésus — Accueil'
   }, [])
@@ -93,12 +95,14 @@ function HomePage() {
               enseignants et les élèves.
             </p>
             <div className="flex flex-wrap items-center gap-4 mb-12">
-              <Link
-                to="/inscription"
-                className="inline-flex items-center gap-2 px-7 py-3.5 rounded-full bg-sacred-red text-white text-sm font-semibold shadow-lg shadow-sacred-red/30 hover:scale-105 transition-transform"
-              >
-                Inscrire mon enfant <ArrowRight className="size-4" />
-              </Link>
+              {!userIsAuth && (
+                <Link
+                  to="/inscription"
+                  className="inline-flex items-center gap-2 px-7 py-3.5 rounded-full bg-sacred-red text-white text-sm font-semibold shadow-lg shadow-sacred-red/30 hover:scale-105 transition-transform"
+                >
+                  S'inscrire étant que parent <ArrowRight className="size-4" />
+                </Link>
+              )}
               <Link
                 to="/ecole"
                 className="inline-flex items-center gap-2 px-7 py-3.5 rounded-full border border-border text-sm font-semibold hover:bg-card transition-all"

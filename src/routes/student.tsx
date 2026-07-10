@@ -6,6 +6,7 @@ import {
   CalendarDays,
   Award,
   CreditCard,
+  Users,
 } from 'lucide-react'
 import { DashboardShell } from '@/components/Dashboard-shell'
 
@@ -15,6 +16,7 @@ const studentNavItems = [
   { to: '/parent/cours', label: 'Cours', icon: BookOpen },
   { to: '/parent/horaires', label: 'Horaires', icon: CalendarDays },
   { to: '/parent/points', label: 'Points & Bulletins', icon: Award },
+  { to: '/parent/mesEnfants', label: 'Mes enfants', icon: Users },
   { to: '/parent/paiements', label: 'Reçus', icon: CreditCard },
 ]
 

@@ -60,11 +60,9 @@ export interface RegisterParentUser extends BaseUser {
   phone: string
 }
 
-export interface StudentUser extends BaseUser {
-  role: 'student'
-  isValidatedByAdmin: boolean
-  currentClassName: SchoolClassName
-  // Detailed registration data
+export interface StudentUser {
+  id: string
+  currentClassName: string
   lastName: string
   middleName: string
   firstName: string
@@ -84,9 +82,12 @@ export interface StudentUser extends BaseUser {
   address: string
   province: string
   classe_id?: string
+  anneeScolaire: string
+  status: 'en_attente' | 'accepte' | 'rejete'
+  parent_id: string
 }
 
-export type AnyUser = AdminUser | TeacherUser | StudentUser | RegisterParentUser
+export type AnyUser = AdminUser | TeacherUser | RegisterParentUser
 
 export interface Announcement {
   id: string

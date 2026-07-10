@@ -72,9 +72,9 @@ export const useAuthStore = create<AuthState>()(
           // 2. Si Enseignant : Récupération des détails via le Service dédié (Pas d'appel direct Supabase ici)
           if (role === 'teacher') {
             try {
-              const teacherData = await teacherService.getDetailsByEmail(
+              const teacherData = (await teacherService.getDetailsByEmail(
                 user.email ?? email
-              )
+              )) as TeacherUser | null
 
               if (teacherData) {
                 userSession = {

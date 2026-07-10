@@ -50,15 +50,25 @@ class TeacherService {
     }
   }
 
-  async getDetailsByEmail(email: string): Promise<TeacherUser> {
-    const { data, error } = await supabase
-      .from('archives')
+  async getDetailsByEmail(email: string): Promise<TeacherUser | null> {
+    const { data: teacherData, error } = await supabase
+      .from('enseignants_details')
       .select('*')
       .eq('email', email)
-      .single()
+      .maybeSingle()
 
     if (error) throw error
-    return data || []
+    if (!teacherData) return null
+
+    return {
+      id: teacherData.id,
+      email: teacherData.email,
+      role: 'teacher',
+      fullName: teacherData.fullName,
+      teacherAccessId: teacherData.teacherAccessId,
+      assignedclasses: teacherData.assignedclasses || [],
+      createdAt: teacherData.created_at,
+    }
   }
 
   // Étape 2 : Activation par l'enseignant lui-même
@@ -74,11 +84,7 @@ class TeacherService {
         .eq('email', email)
         .eq('teacherAccessId', matricule)
         .maybeSingle()
-      const { data: tea, error: teaError } = await supabase
-        .from('enseignants_details')
-        .select('*')
 
-      console.log(tea, teaError)
       if (teacherError) throw teacherError
       if (!teacher) {
         throw new Error(

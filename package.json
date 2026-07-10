@@ -48,6 +48,7 @@
     "formik": "^2.4.9",
     "framer-motion": "^12.38.0",
     "input-otp": "^1.4.2",
+    "jspdf": "^4.2.1",
     "lucide-react": "^1.16.0",
     "nanoid": "^5.1.14",
     "react": "^19.2.6",

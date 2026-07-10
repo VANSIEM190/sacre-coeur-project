@@ -1,6 +1,9 @@
 import { Routes, Route, Link } from 'react-router-dom'
 import { useThemeEffect } from '@/hooks/use-theme-effect'
 
+import { Navigate, Outlet } from 'react-router-dom'
+import { useAuthStore } from '@/stores/auth-store'
+
 import HomePage from './routes/index'
 import LoginPage from './routes/login'
 import InscriptionParentPage from './routes/parentInscription'
@@ -36,6 +39,7 @@ import TeacherCotations from './routes/teacher.cotations'
 import TeacherHoraires from './routes/teacher.horaires'
 import { supabase } from './supabase/supabaseClient'
 import { Toaster } from 'sonner'
+import ParentChildrenManager from './routes/parentChildrenManager'
 
 function NotFound() {
   return (
@@ -59,6 +63,17 @@ function NotFound() {
   )
 }
 
+export function GuestRoute() {
+  const currentUser = useAuthStore(s => s.currentUser)
+
+  if (currentUser) {
+    // Redirige vers le dashboard selon son rôle ou une page par défaut
+    return <Navigate to={`/${currentUser?.role}`} replace />
+  }
+
+  return <Outlet />
+}
+
 export default function App() {
   useThemeEffect()
   console.log(supabase)
@@ -68,12 +83,15 @@ export default function App() {
 
       <Routes>
         <Route path="/" element={<HomePage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/inscription" element={<InscriptionParentPage />} />
         <Route path="/ecole" element={<EcolePage />} />
         <Route path="/autorites" element={<AutoritesPage />} />
         <Route path="/confidentialite" element={<ConfidentialitePage />} />
         <Route path="/support" element={<SupportPage />} />
+
+        <Route element={<GuestRoute />}>
+          <Route path="/inscription" element={<InscriptionParentPage />} />
+          <Route path="/login" element={<LoginPage />} />
+        </Route>
 
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<AdminHome />} />
@@ -93,6 +111,7 @@ export default function App() {
           <Route path="annonces" element={<StudentAnnonces />} />
           <Route path="cours" element={<StudentCours />} />
           <Route path="horaires" element={<StudentHoraires />} />
+          <Route path="mesEnfants" element={<ParentChildrenManager />} />
           <Route path="paiements" element={<StudentPaiements />} />
           <Route path="points" element={<StudentPoints />} />
         </Route>
