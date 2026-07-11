@@ -169,11 +169,11 @@ export interface PaymentReceipt {
   studentId: string
   tranche: PaymentTranche
   amount: number
-  currency: 'USD' | 'CDF'
   schoolYear: string
   paidAt: string
   cashierName: string
-  receiptNumber: string
+  studentName: string
+  reason: string
 }
 
 export interface filterElementType<T> {

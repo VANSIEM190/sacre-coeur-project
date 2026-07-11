@@ -21,6 +21,15 @@ class StudentServices {
     if (error) throw error
     return data || []
   }
+  async getAllStudents(): Promise<StudentUser[]> {
+    const { data, error } = await supabase
+      .from('eleves_details')
+      .select('*')
+      .order('updatedAt', { ascending: false })
+
+    if (error) throw error
+    return data || []
+  }
 
   // Création d'un enfant
   async createStudent(
