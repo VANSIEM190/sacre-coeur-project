@@ -7,6 +7,7 @@ import type { StudentUser, PaymentTranche, PaymentReceipt } from '@/lib/types'
 import { Plus, Receipt, Search, Filter } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { studentService } from '@/services/student/Student.service'
+import { getCurrentSchoolYear } from '@/utils/getCurrentSchoolYear'
 
 const sanitizeInput = (val: string): string => {
   return val.replace(/[<>]/g, '').trim()
@@ -48,9 +49,10 @@ function AdminPaiements() {
   const [studentSearch, setStudentSearch] = useState('')
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const [tranche, setTranche] = useState<PaymentTranche>(1)
+  const [currency, setCurrency] = useState<'USD' | 'FC'>('USD')
   const [amount, setAmount] = useState(250)
   const [cashier, setCashier] = useState('')
-  const [schoolYear, setSchoolYear] = useState('2025-2026')
+  const [schoolYear] = useState(getCurrentSchoolYear())
   const [reason, setReason] = useState('Minerval')
 
   // États de Filtrage de la Liste
@@ -111,6 +113,7 @@ function AdminPaiements() {
     const cleanStudentId = sanitizeInput(studentId)
     const cleanStudentName = sanitizeInput(studentSearch)
     const cleanCashier = sanitizeInput(cashier)
+    const cleanCurrency = sanitizeInput(currency) as 'USD' | 'FC'
     const cleanSchoolYear = sanitizeInput(schoolYear)
     const cleanReason = sanitizeInput(reason)
     const validatedAmount = Math.max(0, Math.abs(amount))
@@ -122,7 +125,7 @@ function AdminPaiements() {
       studentName: cleanStudentName,
       tranche,
       amount: validatedAmount,
-      // currency: 'USD',
+      currency: cleanCurrency,
       schoolYear: cleanSchoolYear,
       cashierName: cleanCashier,
       reason: cleanReason,
@@ -206,15 +209,15 @@ function AdminPaiements() {
           <option value={3}>Tranche 3</option>
         </select>
 
-        <select
+        {/* Input d'Année Scolaire désactivé avec valeur par défaut */}
+        <input
+          type="text"
           value={schoolYear}
-          onChange={e => setSchoolYear(e.target.value)}
-          className="px-4 py-3 rounded-xl border border-border bg-background text-sm"
-        >
-          <option value="2025-2026">2025-2026</option>
-          <option value="2024-2025">2024-2025</option>
-          <option value="2023-2024">2023-2024</option>
-        </select>
+          disabled
+          readOnly
+          className="px-4 py-3 rounded-xl border border-border bg-background/50 text-sm text-foreground/60 cursor-not-allowed"
+          placeholder="Année Scolaire"
+        />
 
         <select
           value={reason}
@@ -227,15 +230,26 @@ function AdminPaiements() {
           <option value="Autres frais">Autres frais</option>
         </select>
 
-        <input
-          type="number"
-          value={amount}
-          min="1"
-          onChange={e => setAmount(Number(e.target.value))}
-          required
-          placeholder="Montant USD"
-          className="px-4 py-3 rounded-xl border border-border bg-background text-sm"
-        />
+        {/* Bloc Montant & Devise pour préserver parfaitement l'alignement */}
+        <div className="flex gap-2">
+          <input
+            type="number"
+            value={amount}
+            min="1"
+            onChange={e => setAmount(Number(e.target.value))}
+            required
+            placeholder="Montant"
+            className="flex-1 px-4 py-3 rounded-xl border border-border bg-background text-sm min-w-0"
+          />
+          <select
+            value={currency}
+            onChange={e => setCurrency(e.target.value as 'USD' | 'FC')}
+            className="px-3 py-3 rounded-xl border border-border bg-background text-sm font-semibold shrink-0"
+          >
+            <option value="USD">USD</option>
+            <option value="FC">FC</option>
+          </select>
+        </div>
 
         <input
           type="text"
@@ -290,9 +304,7 @@ function AdminPaiements() {
         ) : (
           filteredReceipts.map(r => {
             const currentStudent = students.find(x => x.id === r.studentId)
-            const displayReceiptNum =
-              (r as any).receiptNumber ||
-              `REC-${r.id.substring(0, 8).toUpperCase()}`
+            const displayReceiptNum = `REC-${r.id.substring(0, 8).toUpperCase()}`
 
             // Reconstitution du nom s'il n'est pas stocké en dur dans le reçu
             const studentFallbackName = currentStudent
@@ -322,7 +334,7 @@ function AdminPaiements() {
                   </div>
                 </div>
                 <p className="font-semibold text-sm whitespace-nowrap">
-                  {r.amount} {'USD'}
+                  {r.amount} {r.currency || 'USD'}
                 </p>
               </div>
             )

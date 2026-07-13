@@ -24,7 +24,7 @@ import AdminPaiements from './routes/admin.paiements'
 import AdminPalmares from './routes/admin.palmares'
 import AdminValidations from './routes/admin.validations'
 
-import StudentLayout from './routes/student'
+import StudentLayout from './routes/parent'
 import StudentHome from './routes/student.index'
 import StudentAnnonces from './routes/parent.annonces'
 import StudentCours from './routes/parent.cours'
@@ -40,6 +40,7 @@ import TeacherHoraires from './routes/teacher.horaires'
 import { supabase } from './supabase/supabaseClient'
 import { Toaster } from 'sonner'
 import ParentChildrenManager from './routes/parentChildrenManager'
+import StudentProfile from './routes/StudentProfile'
 
 function NotFound() {
   return (
@@ -114,6 +115,7 @@ export default function App() {
           <Route path="mesEnfants" element={<ParentChildrenManager />} />
           <Route path="paiements" element={<StudentPaiements />} />
           <Route path="points" element={<StudentPoints />} />
+          {/* <Route path="studentProfile" element={<StudentProfile />} /> */}
         </Route>
 
         <Route path="/teacher" element={<TeacherLayout />}>

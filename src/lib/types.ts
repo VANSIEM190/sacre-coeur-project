@@ -174,6 +174,7 @@ export interface PaymentReceipt {
   cashierName: string
   studentName: string
   reason: string
+  currency: 'USD' | 'FC'
 }
 
 export interface filterElementType<T> {

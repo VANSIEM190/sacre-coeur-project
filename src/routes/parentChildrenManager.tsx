@@ -10,6 +10,8 @@ import {
   Users,
   GraduationCap,
   Loader2,
+  ArrowLeft,
+  ArrowBigUp,
 } from 'lucide-react'
 import { getCurrentSchoolYear } from '@/utils/getCurrentSchoolYear'
 import { studentSchema } from '@/validators/studentSchema'
@@ -17,6 +19,7 @@ import { studentService } from '@/services/student/Student.service'
 import { useFetchData, useMutateData } from '@/hooks/useQuery'
 import type { ClassName, StudentUser } from '@/lib/types'
 import { classService } from '@/services/classe/classe.service'
+import StudentProfile from './StudentProfile'
 
 const initialValues = {
   lastName: '',
@@ -45,6 +48,9 @@ export default function ParentChildrenManager() {
   const queryClient = useQueryClient()
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingStudent, setEditingStudent] = useState<StudentUser | null>(null)
+  const [selectedStudent, setSelectedStudent] = useState<StudentUser | null>(
+    null
+  )
 
   // 1. Fetch de la liste réelle des enfants
   const { data: childrenList = [], isLoading } = useFetchData<StudentUser[]>(
@@ -105,6 +111,23 @@ export default function ParentChildrenManager() {
     setIsModalOpen(false)
   }
 
+  if (selectedStudent) {
+    return (
+      <div className="space-y-4">
+        {/* Bouton retour pour réinitialiser l'état */}
+        <button
+          onClick={() => setSelectedStudent(null)}
+          className="flex items-center gap-2 text-sm font-medium text-sacred-red hover:opacity-80 transition-opacity"
+        >
+          <ArrowLeft className="size-4" /> Retour à la liste des élèves
+        </button>
+
+        {/* Le profil de l'élève lié */}
+        <StudentProfile student={selectedStudent} />
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-8">
       {/* SECTION TITRE & ACTION */}
@@ -159,6 +182,13 @@ export default function ParentChildrenManager() {
               </div>
 
               <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setSelectedStudent(child)}
+                  className="p-2.5 rounded-xl bg-muted/40 hover:bg-muted text-foreground/80 hover:text-foreground transition-colors"
+                  title="voir le profil"
+                >
+                  <ArrowBigUp className="size-4" />
+                </button>
                 <button
                   onClick={() => {
                     setEditingStudent(child)

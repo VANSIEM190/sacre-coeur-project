@@ -128,20 +128,22 @@ export function PublicHeader() {
                 {link.label}
               </Link>
             ))}
-            <div className="flex gap-2 pt-2 border-t border-border">
-              <Link
-                to="/login"
-                className="flex-1 text-center py-2 rounded-full border border-border text-sm font-semibold"
-              >
-                Connexion
-              </Link>
-              <Link
-                to="/inscription"
-                className="flex-1 text-center py-2 rounded-full bg-sacred-red text-white text-sm font-semibold"
-              >
-                Inscription
-              </Link>
-            </div>
+            {!currentUser && (
+              <div className="flex gap-2 pt-2 border-t border-border">
+                <Link
+                  to="/login"
+                  className="flex-1 text-center py-2 rounded-full border border-border text-sm font-semibold"
+                >
+                  Connexion
+                </Link>
+                <Link
+                  to="/inscription"
+                  className="flex-1 text-center py-2 rounded-full bg-sacred-red text-white text-sm font-semibold"
+                >
+                  Inscription
+                </Link>
+              </div>
+            )}
           </div>
         </motion.div>
       )}
