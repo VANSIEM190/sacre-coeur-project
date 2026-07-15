@@ -17,7 +17,8 @@ interface AuthState {
 
   login: (
     email: string,
-    password: string
+    password: string,
+    expectedRole: UserRole
   ) => Promise<{ ok: boolean; role?: UserRole; error?: string }>
 
   registerParent: (
@@ -44,14 +45,18 @@ export const useAuthStore = create<AuthState>()(
       registeredUsers: [],
       theme: 'light',
 
-      login: async (email, password) => {
+      login: async (email, password, expectedRole) => {
         try {
           if (!email || !password) {
             return { ok: false, error: 'Veuillez remplir tous les champs.' }
           }
 
-          // 1. Authentification globale et récupération du rôle
-          const { user, role } = await authService.login(email, password)
+          // 1. Authentification globale avec validation stricte du rôle attendu côté serveur/Supabase
+          const { user, role } = await authService.login(
+            email,
+            password,
+            expectedRole as UserRole
+          )
 
           if (!user) {
             return {
@@ -69,7 +74,7 @@ export const useAuthStore = create<AuthState>()(
             createdAt: user.created_at,
           } as AnyUser
 
-          // 2. Si Enseignant : Récupération des détails via le Service dédié (Pas d'appel direct Supabase ici)
+          // 2. Si Enseignant : Récupération des détails via le Service dédié
           if (role === 'teacher') {
             try {
               const teacherData = (await teacherService.getDetailsByEmail(

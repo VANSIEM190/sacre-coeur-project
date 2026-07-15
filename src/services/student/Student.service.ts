@@ -31,6 +31,17 @@ class StudentServices {
     return data || []
   }
 
+  async getPendingStudents(): Promise<StudentUser[]> {
+    const { data, error } = await supabase
+      .from('eleves_details')
+      .select('*')
+      .eq('status', 'en_attente')
+      .order('updatedAt', { ascending: false })
+
+    if (error) throw error
+    return data || []
+  }
+
   // Création d'un enfant
   async createStudent(
     values: Omit<
@@ -84,6 +95,29 @@ class StudentServices {
       })
       .eq('id', id)
       .eq('parent_id', user.id) // Sécurité : Empêche de modifier l'enfant d'un autre parent
+      .select()
+      .single()
+
+    if (error) throw error
+    return data
+  }
+
+  async updateStudentStatus(
+    id: string,
+    status: 'valide' | 'rejete'
+  ): Promise<StudentUser> {
+    // Sécurité supplémentaire : Vérification de session active côté client avant la requête
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser()
+    if (authError || !user)
+      throw new Error('Action non autorisée : session introuvable')
+
+    const { data, error } = await supabase
+      .from('eleves_details')
+      .update({ status })
+      .eq('id', id)
       .select()
       .single()
 

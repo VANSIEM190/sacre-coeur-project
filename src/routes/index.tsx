@@ -282,13 +282,13 @@ function HomePage() {
                   <p className="text-xs uppercase tracking-widest opacity-60 mb-1">
                     Téléphone
                   </p>
-                  <p className="font-medium">+243 810 860 751</p>
+                  <p className="font-medium text-xs">+243 810 860 751</p>
                 </div>
                 <div className="bg-white/10 rounded-2xl p-4">
                   <p className="text-xs uppercase tracking-widest opacity-60 mb-1">
                     Email
                   </p>
-                  <p className="font-medium break-all">
+                  <p className="font-medium text-xs break-all">
                     info@cssacrecoeurdejesus.edu
                   </p>
                 </div>
@@ -296,7 +296,7 @@ function HomePage() {
                   <p className="text-xs uppercase tracking-widest opacity-60 mb-1">
                     Adresse
                   </p>
-                  <p className="font-medium">
+                  <p className="font-medium text-xs">
                     Av. INDONDO/KIKWIT N°36/40 Q/ MPASSA2 C/ N'SELE KINSHASA ,
                     RDC{' '}
                   </p>

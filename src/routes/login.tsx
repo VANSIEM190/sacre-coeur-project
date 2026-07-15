@@ -18,7 +18,7 @@ function LoginPage() {
   }, [])
 
   const navigate = useNavigate()
-  const [role, setRole] = useState<UserRole>('student')
+  const [role, setRole] = useState<UserRole>('parent') // Initialisé à 'parent' car 'student' n'est pas dans roleOptions
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [teacherAccessId, setTeacherAccessId] = useState('')
@@ -30,13 +30,12 @@ function LoginPage() {
 
   const { login } = useAuthStore()
 
-  // On gère le changement de rôle proprement dans une fonction dédiée
   const handleRoleChange = (newRole: UserRole) => {
     setRole(newRole)
     setError('')
     setSuccessMessage('')
     setIsActivating(false)
-    setPassword('') // Optionnel : nettoie le mot de passe pour des raisons de sécurité
+    setPassword('')
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -57,7 +56,8 @@ function LoginPage() {
         return
       }
 
-      const result = await login(email, password)
+      // Transmission stricte du rôle attendu pour filtrage de session
+      const result = await login(email, password, role)
 
       if (!result.ok) {
         setError(result.error ?? 'Échec de connexion')
@@ -65,20 +65,7 @@ function LoginPage() {
         return
       }
 
-      if (result.role !== role) {
-        setError(
-          `Ce compte n'est pas enregistré en tant qu'${
-            role === 'parent'
-              ? 'parent'
-              : role === 'teacher'
-                ? 'enseignant'
-                : 'administrateur'
-          }.`
-        )
-        setIsLoading(false)
-        return
-      }
-
+      // Redirection sécurisée selon le rôle renvoyé et validé par l'API
       if (result.role === 'admin') navigate('/admin')
       else if (result.role === 'teacher') navigate('/teacher')
       else if (result.role === 'parent') navigate('/parent')

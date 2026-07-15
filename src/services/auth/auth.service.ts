@@ -1,8 +1,9 @@
+// @/services/auth/auth.service.ts
 import { supabase } from '@/supabase/supabaseClient'
 import { SupabaseErrorHandler } from '../core/Supabase.error.handler'
 import type { User } from '@supabase/supabase-js'
 
-export type UserRole = 'admin' | 'teacher' | 'parent'
+export type UserRole = 'admin' | 'teacher' | 'parent' | 'student'
 
 export interface LoginResponse {
   user: User
@@ -10,8 +11,13 @@ export interface LoginResponse {
 }
 
 class AuthService {
-  async login(email: string, password: string): Promise<LoginResponse> {
+  async login(
+    email: string,
+    password: string,
+    expectedRole: UserRole
+  ): Promise<LoginResponse> {
     try {
+      // 1. Connexion initiale via Supabase Auth
       const { data: authData, error: authError } =
         await supabase.auth.signInWithPassword({
           email,
@@ -22,18 +28,42 @@ class AuthService {
       if (!authData.user)
         throw new Error('Impossible de récupérer les données utilisateur.')
 
+      // 2. Récupération sécurisée du profil utilisateur en base de données
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('role')
         .eq('id', authData.user.id)
         .maybeSingle()
 
-      if (profileError) throw profileError
-      if (!profileData) throw new Error('Aucun profil associé à ce compte.')
+      if (profileError) {
+        await this.logout() // Déconnexion préventive en cas d'erreur de récupération du profil
+        throw profileError
+      }
+
+      if (!profileData) {
+        await this.logout() // Déconnexion immédiate s'il n'y a aucun profil associé
+        throw new Error('Aucun profil associé à ce compte.')
+      }
+
+      const userRole = profileData.role as UserRole
+
+      // 3. Sécurité Critique : Validation de la cohérence du rôle demandé
+      if (userRole !== expectedRole) {
+        await this.logout() // Déconnexion immédiate et destruction de la session Supabase
+        const readableRole =
+          expectedRole === 'parent'
+            ? 'parent'
+            : expectedRole === 'teacher'
+              ? 'enseignant'
+              : 'administrateur'
+        throw new Error(
+          `Ce compte n'est pas enregistré en tant qu'${readableRole}.`
+        )
+      }
 
       return {
         user: authData.user,
-        role: profileData.role as UserRole,
+        role: userRole,
       }
     } catch (error) {
       SupabaseErrorHandler.handle(error)
@@ -47,6 +77,13 @@ class AuthService {
     password: string,
     role: UserRole
   ): Promise<string> {
+    // Sécurité : Interdiction absolue d'auto-créer un rôle d'administration côté client
+    if (role === 'admin') {
+      throw new Error(
+        'Action non autorisée : Vous ne pouvez pas créer de compte administrateur par cette voie.'
+      )
+    }
+
     const { data: signUpData, error: signUpError } = await supabase.auth.signUp(
       {
         email,
@@ -88,5 +125,4 @@ class AuthService {
   }
 }
 
-// Nom au singulier et export propre
 export const authService = new AuthService()
