@@ -132,6 +132,7 @@ class StudentServices {
       error: authError,
     } = await supabase.auth.getUser()
     if (authError || !user) throw new Error('Utilisateur non authentifié')
+    console.log(user.id)
 
     const { error } = await supabase
       .from('eleves_details')

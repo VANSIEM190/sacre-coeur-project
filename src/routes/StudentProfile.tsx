@@ -12,11 +12,11 @@ import {
   AlertTriangle,
   Clock,
 } from 'lucide-react'
+import { getCurrentSchoolYear } from '@/utils/getCurrentSchoolYear'
 
 // Définition des Props du composant
 interface StudentProfileFinanceProps {
   student: StudentUser
-  currentSchoolYear?: string
 }
 
 // Helper pour formater le nom complet
@@ -26,8 +26,9 @@ const getStudentFullName = (s: Partial<StudentUser>) => {
 
 export default function StudentProfile({
   student,
-  currentSchoolYear = '2025-2026',
 }: StudentProfileFinanceProps) {
+  const currentSchoolYear = getCurrentSchoolYear()
+  console.log(student.id)
   // 1. Récupération de TOUS les reçus de cet élève
   const { data: receipts = [], isLoading } = useFetchData<PaymentReceipt[]>(
     ['payments', student.id],
@@ -40,7 +41,7 @@ export default function StudentProfile({
       r => r.studentId === student.id && r.schoolYear === currentSchoolYear
     )
   }, [receipts, student.id, currentSchoolYear])
-
+  console.log(receipts)
   // 3. Calcul du total payé par Devise (USD et FC)
   const totals = useMemo(() => {
     return studentReceipts.reduce(

@@ -4,8 +4,6 @@ import {
   Megaphone,
   BookOpen,
   CalendarDays,
-  Award,
-  CreditCard,
   Users,
 } from 'lucide-react'
 import { DashboardShell } from '@/components/Dashboard-shell'
@@ -15,12 +13,10 @@ const studentNavItems = [
   { to: '/parent/annonces', label: 'Annonces', icon: Megaphone },
   { to: '/parent/cours', label: 'Cours', icon: BookOpen },
   { to: '/parent/horaires', label: 'Horaires', icon: CalendarDays },
-  { to: '/parent/points', label: 'Points & Bulletins', icon: Award },
   { to: '/parent/mesEnfants', label: 'Mes enfants', icon: Users },
-  { to: '/parent/paiements', label: 'Reçus', icon: CreditCard },
 ]
 
-function StudentLayout() {
+function ParentLayout() {
   return (
     <DashboardShell
       navItems={studentNavItems}
@@ -32,4 +28,4 @@ function StudentLayout() {
   )
 }
 
-export default StudentLayout
+export default ParentLayout

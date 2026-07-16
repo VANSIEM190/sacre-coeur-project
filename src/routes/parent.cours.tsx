@@ -16,7 +16,7 @@ const fakeDownload = (filename: string, content: string) => {
   URL.revokeObjectURL(url)
 }
 
-function StudentCours() {
+function ParentCours() {
   // États pour le système de filtrage
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedClassFilter, setSelectedClassFilter] = useState('Tous')
@@ -105,4 +105,4 @@ function StudentCours() {
   )
 }
 
-export default StudentCours
+export default ParentCours

@@ -15,7 +15,7 @@ const DAYS: ScheduleEntry['dayOfWeek'][] = [
   'Samedi',
 ]
 
-function StudentHoraires() {
+function ParentHoraires() {
   // Navigation basée sur le type structurel ClassName réel de la base de données
   const [selectedClass, setSelectedClass] = useState<ClassName | null>(null)
   const [searchQuery, setSearchQuery] = useState<string>('')
@@ -224,4 +224,4 @@ function StudentHoraires() {
   )
 }
 
-export default StudentHoraires
+export default ParentHoraires

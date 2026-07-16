@@ -4,7 +4,7 @@ import { announcementService } from '@/services/announcement/announcement.servic
 import { useFetchData } from '@/hooks/useQuery'
 import { Loader2 } from 'lucide-react'
 
-function StudentAnnonces() {
+function ParentAnnonces() {
   const {
     data: announcements = [],
     isLoading,
@@ -86,4 +86,4 @@ function StudentAnnonces() {
   )
 }
 
-export default StudentAnnonces
+export default ParentAnnonces

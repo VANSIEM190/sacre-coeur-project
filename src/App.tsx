@@ -24,13 +24,11 @@ import AdminPaiements from './routes/admin.paiements'
 import AdminPalmares from './routes/admin.palmares'
 import AdminValidations from './routes/admin.validations'
 
-import StudentLayout from './routes/parent'
-import StudentHome from './routes/student.index'
-import StudentAnnonces from './routes/parent.annonces'
-import StudentCours from './routes/parent.cours'
-import StudentHoraires from './routes/parent.horaires'
-import StudentPaiements from './routes/student.paiements'
-import StudentPoints from './routes/student.points'
+import ParentLayout from './routes/parent'
+import ParentHome from './routes/parent.index'
+import ParentAnnonces from './routes/parent.annonces'
+import ParentCours from './routes/parent.cours'
+import ParentHoraires from './routes/parent.horaires'
 
 import TeacherLayout from './routes/teacher'
 import TeacherHome from './routes/teacher.index'
@@ -40,7 +38,6 @@ import TeacherHoraires from './routes/teacher.horaires'
 import { supabase } from './supabase/supabaseClient'
 import { Toaster } from 'sonner'
 import ParentChildrenManager from './routes/parentChildrenManager'
-import StudentProfile from './routes/StudentProfile'
 
 function NotFound() {
   return (
@@ -107,15 +104,12 @@ export default function App() {
           <Route path="validations" element={<AdminValidations />} />
         </Route>
 
-        <Route path="/parent" element={<StudentLayout />}>
-          <Route index element={<StudentHome />} />
-          <Route path="annonces" element={<StudentAnnonces />} />
-          <Route path="cours" element={<StudentCours />} />
-          <Route path="horaires" element={<StudentHoraires />} />
+        <Route path="/parent" element={<ParentLayout />}>
+          <Route index element={<ParentHome />} />
+          <Route path="annonces" element={<ParentAnnonces />} />
+          <Route path="cours" element={<ParentCours />} />
+          <Route path="horaires" element={<ParentHoraires />} />
           <Route path="mesEnfants" element={<ParentChildrenManager />} />
-          <Route path="paiements" element={<StudentPaiements />} />
-          <Route path="points" element={<StudentPoints />} />
-          {/* <Route path="studentProfile" element={<StudentProfile />} /> */}
         </Route>
 
         <Route path="/teacher" element={<TeacherLayout />}>

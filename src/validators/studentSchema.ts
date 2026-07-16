@@ -1,9 +1,9 @@
 import { z } from 'zod'
 
 export const studentSchema = z.object({
-  lastName: z.string().trim().min(1, 'Requis').max(60),
-  middleName: z.string().trim().max(60),
-  firstName: z.string().trim().min(1, 'Requis').max(60),
+  lastName: z.string().trim().min(3, 'Requis').max(60),
+  middleName: z.string().trim().min(3, 'Requis').max(60),
+  firstName: z.string().trim().min(3, 'Requis').max(60),
   birthDate: z.string().min(1, 'Requis'),
   birthPlace: z.string().trim().min(1, 'Requis').max(80),
   gender: z.enum(['M', 'F']),
