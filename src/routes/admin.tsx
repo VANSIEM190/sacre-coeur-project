@@ -10,6 +10,7 @@ import {
   Trophy,
   CreditCard,
   UserCheck,
+  Coins,
 } from 'lucide-react'
 import { DashboardShell } from '@/components/Dashboard-shell'
 
@@ -24,6 +25,7 @@ const adminNavItems = [
   { to: '/admin/archives', label: 'Archives', icon: Archive },
   { to: '/admin/palmares', label: 'Palmarès', icon: Trophy },
   { to: '/admin/paiements', label: 'Paiements', icon: CreditCard },
+  { to: '/admin/mode-de-paiement', label: 'mode de paiement', icon: Coins },
 ]
 
 function AdminLayout() {

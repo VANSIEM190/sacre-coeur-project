@@ -38,6 +38,7 @@ import TeacherHoraires from './routes/teacher.horaires'
 import { supabase } from './supabase/supabaseClient'
 import { Toaster } from 'sonner'
 import ParentChildrenManager from './routes/parentChildrenManager'
+import AdminFixationPaiement from './routes/admin.fixatiionPaiement'
 
 function NotFound() {
   return (
@@ -100,6 +101,7 @@ export default function App() {
           <Route path="enseignants" element={<AdminTeachers />} />
           <Route path="horaires" element={<AdminHoraires />} />
           <Route path="paiements" element={<AdminPaiements />} />
+          <Route path="mode-de-paiement" element={<AdminFixationPaiement />} />
           <Route path="palmares" element={<AdminPalmares />} />
           <Route path="validations" element={<AdminValidations />} />
         </Route>

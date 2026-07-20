@@ -184,3 +184,16 @@ export interface filterElementType<T> {
   selectKey?: keyof T
   selectedValue?: string
 }
+
+//fixation
+export interface ClassFeeConfig {
+  id: string
+  classId: string
+  className: string
+  tranche: 1 | 2 | 3
+  reason: string
+  amount: number
+  currency: 'USD' | 'FC'
+  schoolYear: string
+  paidAt: string
+}
