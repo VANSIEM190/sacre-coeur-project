@@ -1,147 +1,133 @@
-// @/services/studentService.ts
 import { supabase } from '@/supabase/supabaseClient'
-import type { StudentUser } from '@/lib/types'
-import { getCurrentSchoolYear } from '@/utils/getCurrentSchoolYear'
+import type { EleveDetails } from '@/lib/types'
 
-class StudentServices {
-  // Récupérer les enfants liés au parent connecté
-  async getStudentsByParent(): Promise<StudentUser[]> {
+class StudentService {
+  /**
+   * Helper privé pour vérifier l'authentification et récupérer l'ID utilisateur.
+   * Évite la duplication de code et garantit la présence d'une session valide.
+   */
+  private async getAuthenticatedUserId(): Promise<string> {
     const {
       data: { user },
-      error: authError,
+      error,
     } = await supabase.auth.getUser()
-    if (authError || !user) throw new Error('Utilisateur non authentifié')
+
+    if (error || !user) {
+      throw new Error('Session invalide ou utilisateur non authentifié.')
+    }
+    return user.id
+  }
+
+  /**
+   * Récupère tous les élèves rattachés au parent authentifié.
+   */
+  async getStudentsByParent(): Promise<EleveDetails[]> {
+    const userId = await this.getAuthenticatedUserId()
 
     const { data, error } = await supabase
       .from('eleves_details')
       .select('*')
-      .eq('parent_id', user.id) // Sécurité : On ne récupère QUE ses propres enfants
-      .order('updatedAt', { ascending: false })
+      .eq('parent_id', userId)
+      .order('updatedAt', { ascending: false }) // Correction : updatedAt au lieu de updated_at
 
-    if (error) throw error
+    if (error) throw new Error(`Erreur récupération élèves : ${error.message}`)
     return data || []
   }
-  async getAllStudents(): Promise<StudentUser[]> {
+
+  /**
+   * Récupère un élève spécifique par son ID (Isolé strictement par parent_id).
+   */
+  async getStudentById(studentId: string): Promise<EleveDetails> {
+    if (!studentId) throw new Error('ID élève requis.')
+    const userId = await this.getAuthenticatedUserId()
+
     const { data, error } = await supabase
       .from('eleves_details')
       .select('*')
-      .order('updatedAt', { ascending: false })
+      .eq('id', studentId)
+      .eq('parent_id', userId)
+      .single()
 
-    if (error) throw error
-    return data || []
+    if (error)
+      throw new Error(
+        `Élève introuvable ou accès non autorisé : ${error.message}`
+      )
+    return data
   }
 
-  async getPendingStudents(): Promise<StudentUser[]> {
-    const { data, error } = await supabase
-      .from('eleves_details')
-      .select('*')
-      .eq('status', 'en_attente')
-      .order('updatedAt', { ascending: false })
+  /**
+   * Enregistre un nouvel élève en liant automatiquement son parent_id.
+   */
+  // Dans StudentService.ts
 
-    if (error) throw error
-    return data || []
-  }
-
-  // Création d'un enfant
   async createStudent(
-    values: Omit<
-      StudentUser,
-      'id' | 'status' | 'classe_id' | 'parent_id' | 'anneeScolaire'
+    studentData: Omit<
+      EleveDetails,
+      'id' | 'parent_id' | 'updatedAt' | 'createdAt'
     >
-  ): Promise<StudentUser> {
-    if (Object.keys(values).length === 0) {
-      throw new Error('Aucune donnée renseignée')
+  ): Promise<EleveDetails> {
+    const userId = await this.getAuthenticatedUserId()
+
+    // On extrait anneeScolaire pour ne pas l'envoyer dans eleves_details
+    const { anneeScolaire, ...payloadData } = studentData as any
+
+    const payload = {
+      ...payloadData,
+      parent_id: userId,
     }
 
-    // Sécurité : Récupération de la session utilisateur côté Supabase (Inviolable)
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser()
-    if (authError || !user) throw new Error('Session parent introuvable')
-
     const { data, error } = await supabase
       .from('eleves_details')
-      .insert({
-        ...values,
-        parent_id: user.id, // Injecté de force de manière sécurisée
-        anneeScolaire: getCurrentSchoolYear(), // Injecté automatiquement (Kinshasa)
-        classe_id: values.currentClassName,
-        status: 'en_attente', // Statut initial par défaut
-      })
+      .insert(payload)
       .select()
       .single()
 
-    if (error) throw error
+    if (error)
+      throw new Error(
+        `Erreur lors de la création de l'élève : ${error.message}`
+      )
     return data
   }
 
-  // Modification d'un enfant
+  /**
+   * Met à jour les informations d'un élève.
+   */
   async updateStudent(
-    id: string,
-    values: Partial<Omit<StudentUser, 'id' | 'parent_id' | 'anneeScolaire'>>
-  ): Promise<StudentUser> {
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser()
-    if (authError || !user) throw new Error('Utilisateur non authentifié')
+    studentId: string,
+    studentData: Partial<Omit<EleveDetails, 'id' | 'parent_id'>>
+  ): Promise<EleveDetails> {
+    if (!studentId) throw new Error('ID élève requis.')
+    const userId = await this.getAuthenticatedUserId()
 
     const { data, error } = await supabase
       .from('eleves_details')
-      .update({
-        ...values,
-        classe_id: values.currentClassName,
-      })
-      .eq('id', id)
-      .eq('parent_id', user.id) // Sécurité : Empêche de modifier l'enfant d'un autre parent
+      .update(studentData)
+      .eq('id', studentId)
+      .eq('parent_id', userId) // RLS de sécurité au niveau applicatif
       .select()
       .single()
 
-    if (error) throw error
+    if (error)
+      throw new Error(`Erreur lors de la mise à jour : ${error.message}`)
     return data
   }
 
-  async updateStudentStatus(
-    id: string,
-    status: 'valide' | 'rejete'
-  ): Promise<StudentUser> {
-    // Sécurité supplémentaire : Vérification de session active côté client avant la requête
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser()
-    if (authError || !user)
-      throw new Error('Action non autorisée : session introuvable')
-
-    const { data, error } = await supabase
-      .from('eleves_details')
-      .update({ status })
-      .eq('id', id)
-      .select()
-      .single()
-
-    if (error) throw error
-    return data
-  }
-
-  // Suppression d'un enfant
-  async deleteStudent(id: string): Promise<void> {
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser()
-    if (authError || !user) throw new Error('Utilisateur non authentifié')
-    console.log(user.id)
+  /**
+   * Supprime un élève de la base de données.
+   */
+  async deleteStudent(studentId: string): Promise<void> {
+    if (!studentId) throw new Error('ID élève requis.')
+    const userId = await this.getAuthenticatedUserId()
 
     const { error } = await supabase
       .from('eleves_details')
       .delete()
-      .eq('id', id)
-      .eq('parent_id', user.id) // Sécurité : Empêche de supprimer l'enfant d'un autre parent
+      .eq('id', studentId)
+      .eq('parent_id', userId)
 
-    if (error) throw error
+    if (error)
+      throw new Error(`Erreur lors de la suppression : ${error.message}`)
   }
 }
 
-export const studentService = new StudentServices()
+export const studentService = new StudentService()

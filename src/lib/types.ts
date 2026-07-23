@@ -1,5 +1,6 @@
 // Domain types — SRP, explicit naming
-export type UserRole = 'admin' | 'teacher' | 'student' | 'parent'
+export type UserRole = 'admin' | 'teacher' | 'parent'
+export type InscriptionStatus = 'en_attente' | 'valide' | 'rejete'
 export type Day =
   | 'Lundi'
   | 'Mardi'
@@ -60,31 +61,43 @@ export interface RegisterParentUser extends BaseUser {
   phone: string
 }
 
-export interface StudentUser {
+export interface EleveDetails {
   id: string
-  currentClassName: string
   lastName: string
   middleName: string
   firstName: string
   birthDate: string
   birthPlace: string
-  gender: 'M' | 'F'
+  gender: string
   fatherName: string
   motherName: string
   fatherProfession: string
   motherProfession: string
-  childMedicalCondition: string
   guardianRelation: string
   phone: string
-  previousSchoolPercentage: number
   previousSchoolName: string
+  currentClassName: string
+  childPhysicalCondition?: string
   religion: string
   address: string
   province: string
-  classe_id?: string
-  anneeScolaire: string
-  status: 'en_attente' | 'accepte' | 'rejete'
   parent_id: string
+  updated_at?: string
+}
+
+export interface Inscription {
+  id: string
+  eleve_id: string
+  classe_id: string
+  annee_scolaire: string
+  status: InscriptionStatus
+  date_inscription?: string
+}
+
+export interface SystemSetting {
+  key: string
+  value: string
+  updated_at?: string
 }
 
 export type AnyUser = AdminUser | TeacherUser | RegisterParentUser

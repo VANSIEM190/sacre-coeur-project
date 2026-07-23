@@ -1,5 +1,5 @@
 import { supabase } from '@/supabase/supabaseClient'
-import type { ClassName, StudentUser } from '@/lib/types'
+import type { ClassName, EleveDetails } from '@/lib/types'
 
 // --- Interfaces de Réponses Supabase Strictes (Fini le type 'any') ---
 interface SupabaseClassRow {
@@ -10,7 +10,7 @@ interface SupabaseClassRow {
 }
 
 interface SupabaseInscriptionRow {
-  eleves_details: StudentUser | null
+  eleves_details: EleveDetails | null
 }
 
 interface SupabaseTeacherLinkResponse {
@@ -52,7 +52,7 @@ class ClassService {
    * Sécurité : Ne renvoie que les profils valides. Protection RLS requise sur 'inscriptions'.
    * Typage : Élimination du map avec 'any' grâce à l'utilisation de '.returns<T>()'
    */
-  async getStudentsInClass(classId: string): Promise<StudentUser[]> {
+  async getStudentsInClass(classId: string): Promise<EleveDetails[]> {
     // Validation basique de l'UUID pour éviter les requêtes inutiles vers Supabase
     if (!classId) return []
 
@@ -70,9 +70,9 @@ class ClassService {
     if (!data) return []
 
     // Extraction propre et sécurisée contre les valeurs nulles
-    const students: StudentUser[] = data
+    const students: EleveDetails[] = data
       .map(row => row.eleves_details)
-      .filter((student): student is StudentUser => student !== null)
+      .filter((student): student is EleveDetails => student !== null)
 
     return students.sort((a, b) => a.lastName.localeCompare(b.lastName))
   }

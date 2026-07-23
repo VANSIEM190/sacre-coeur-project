@@ -39,6 +39,7 @@ import { supabase } from './supabase/supabaseClient'
 import { Toaster } from 'sonner'
 import ParentChildrenManager from './routes/parentChildrenManager'
 import AdminFixationPaiement from './routes/admin.fixatiionPaiement'
+import AdminSettings from './routes/admin.settings'
 
 function NotFound() {
   return (
@@ -104,6 +105,7 @@ export default function App() {
           <Route path="mode-de-paiement" element={<AdminFixationPaiement />} />
           <Route path="palmares" element={<AdminPalmares />} />
           <Route path="validations" element={<AdminValidations />} />
+          <Route path="parametre" element={<AdminSettings />} />
         </Route>
 
         <Route path="/parent" element={<ParentLayout />}>

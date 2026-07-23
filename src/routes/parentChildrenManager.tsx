@@ -17,7 +17,7 @@ import { getCurrentSchoolYear } from '@/utils/getCurrentSchoolYear'
 import { studentSchema } from '@/validators/studentSchema'
 import { studentService } from '@/services/student/Student.service'
 import { useFetchData, useMutateData } from '@/hooks/useQuery'
-import type { ClassName, StudentUser } from '@/lib/types'
+import type { ClassName, EleveDetails } from '@/lib/types'
 import { classService } from '@/services/classe/classe.service'
 import StudentProfile from './StudentProfile'
 
@@ -47,13 +47,15 @@ const initialValues = {
 export default function ParentChildrenManager() {
   const queryClient = useQueryClient()
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [editingStudent, setEditingStudent] = useState<StudentUser | null>(null)
-  const [selectedStudent, setSelectedStudent] = useState<StudentUser | null>(
+  const [editingStudent, setEditingStudent] = useState<EleveDetails | null>(
+    null
+  )
+  const [selectedStudent, setSelectedStudent] = useState<EleveDetails | null>(
     null
   )
 
   // 1. Fetch de la liste réelle des enfants
-  const { data: childrenList = [], isLoading } = useFetchData<StudentUser[]>(
+  const { data: childrenList = [], isLoading } = useFetchData<EleveDetails[]>(
     ['students', 'parent-list'],
     () => studentService.getStudentsByParent()
   )
@@ -66,7 +68,7 @@ export default function ParentChildrenManager() {
   const createMutation = useMutateData(
     (
       values: Omit<
-        StudentUser,
+        EleveDetails,
         'id' | 'status' | 'classe_id' | 'parent_id' | 'anneeScolaire'
       >
     ) => studentService.createStudent(values),
@@ -85,7 +87,7 @@ export default function ParentChildrenManager() {
     }: {
       id: string
       values: Omit<
-        StudentUser,
+        EleveDetails,
         'id' | 'status' | 'classe_id' | 'parent_id' | 'anneeScolaire'
       >
     }) => studentService.updateStudent(id, values),

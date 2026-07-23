@@ -1,25 +1,34 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { PageHeader } from '@/components/Dashboard-shell'
-import { useFetchData } from '@/hooks/useQuery'
+import { useFetchData, useMutateData } from '@/hooks/useQuery'
 import { paymentService } from '@/services/finance/payment.service'
 import { modePaymentService } from '@/services/finance/modePayment.service'
-import type { StudentUser, PaymentReceipt, ClassFeeConfig } from '@/lib/types'
+import { classService } from '@/services/classe/classe.service'
+import { settingsService } from '@/services/settings/settings.service'
+import { inscriptionService } from '@/services/student/inscription.service'
+import { getEligibleReenrollmentClasses } from '@/utils/getEligibleReenrollmentClasses'
+import { getCurrentSchoolYear } from '@/utils/getCurrentSchoolYear'
+import type {
+  EleveDetails,
+  ClassName,
+  PaymentReceipt,
+  ClassFeeConfig,
+} from '@/lib/types'
 import {
   User,
-  Receipt,
   Calendar,
   GraduationCap,
   CheckCircle2,
   AlertTriangle,
   Clock,
+  UserPlus,
+  X,
+  Loader2,
   Lock,
-  FileText,
-  BarChart3,
 } from 'lucide-react'
-import { getCurrentSchoolYear } from '@/utils/getCurrentSchoolYear'
 
-interface StudentProfileFinanceProps {
-  student: StudentUser
+interface StudentProfileProps {
+  student: EleveDetails
 }
 
 type TrancheKey = 1 | 2 | 3
@@ -34,14 +43,23 @@ interface TrancheData {
   status: TrancheStatus
 }
 
-const getStudentFullName = (s: Partial<StudentUser>): string => {
+const getStudentFullName = (s: Partial<EleveDetails>): string => {
   return [s.firstName, s.middleName, s.lastName].filter(Boolean).join(' ')
 }
 
-export default function StudentProfile({
-  student,
-}: StudentProfileFinanceProps) {
+export default function StudentProfile({ student }: StudentProfileProps) {
   const currentSchoolYear = getCurrentSchoolYear()
+
+  // --- ÉTATS POUR LA MODALE DE RÉINSCRIPTION ---
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isReenrollmentOpen, setIsReenrollmentOpen] = useState(false)
+  const [eligibleClasses, setEligibleClasses] = useState<ClassName[]>([])
+  const [selectedClassId, setSelectedClassId] = useState<string>('')
+  const [isLoadingEligibility, setIsLoadingEligibility] = useState(false)
+  const [feedbackMessage, setFeedbackMessage] = useState<{
+    type: 'success' | 'error'
+    text: string
+  } | null>(null)
 
   // 1. Récupération des reçus de paiement de l'élève
   const { data: receipts = [], isLoading: isLoadingPayments } = useFetchData<
@@ -53,7 +71,28 @@ export default function StudentProfile({
     ClassFeeConfig[]
   >(['classFeeConfigs'], () => modePaymentService.getClassesPayment())
 
-  const isLoading = isLoadingPayments || isLoadingConfigs
+  // Mutation pour créer une réinscription
+  const reenrollMutation = useMutateData(
+    (payload: { eleveId: string; classeId: string; anneeScolaire: string }) =>
+      inscriptionService.createInscription(payload),
+    {
+      onSuccess: () => {
+        setFeedbackMessage({
+          type: 'success',
+          text: 'Demande de réinscription enregistrée avec succès !',
+        })
+        setTimeout(() => {
+          setIsModalOpen(false)
+        }, 1500)
+      },
+      onError: () => {
+        setFeedbackMessage({
+          type: 'error',
+          text: 'Une erreur est survenue lors de la réinscription.',
+        })
+      },
+    }
+  )
 
   // 3. Filtrage local des reçus pour cet élève et l'année en cours
   const studentReceipts = useMemo(() => {
@@ -111,7 +150,6 @@ export default function StudentProfile({
       },
     }
 
-    // Assigner les montants exigés par la direction depuis les configs réelles
     currentClassConfigs.forEach(cfg => {
       const t = Number(cfg.tranche) as TrancheKey
       if (tranches[t]) {
@@ -123,7 +161,6 @@ export default function StudentProfile({
       }
     })
 
-    // Cumuler ce que l'élève a réellement payé
     studentReceipts.forEach(r => {
       const t = Number(r.tranche) as TrancheKey
       if (tranches[t]) {
@@ -134,8 +171,6 @@ export default function StudentProfile({
         }
       }
     })
-
-    // Détermination stricte de la conformité par tranche
     ;(Object.keys(tranches) as unknown as TrancheKey[]).forEach(key => {
       const t = Number(key) as TrancheKey
       const item = tranches[t]
@@ -159,7 +194,64 @@ export default function StudentProfile({
     return { tranches, isGloballyCompliant }
   }, [studentReceipts, currentClassConfigs])
 
-  // Rendu visuel des badges selon l'état réel calculé
+  // --- OUVERTURE ET PRÉPARATION DE LA MODALE ---
+  const handleOpenReenrollmentModal = async () => {
+    setIsLoadingEligibility(true)
+    setFeedbackMessage(null)
+    setIsModalOpen(true)
+
+    try {
+      const isOpen = await settingsService.isReenrollmentOpen()
+      setIsReenrollmentOpen(isOpen)
+
+      if (isOpen && student.currentClassName) {
+        const allClasses = await classService.getAllClasses()
+
+        // 1. Trouver l'objet classe correspondant à l'ID stocké dans currentClassName
+        const currentClassObj = allClasses.find(
+          c => c.id === student.currentClassName
+        )
+
+        // 2. Extraire le vrai nom (ex: "8ème") ou utiliser student.currentClassName s'il contenait déjà le nom
+        const currentClassNameString = currentClassObj
+          ? currentClassObj.nom_classe
+          : student.currentClassName
+
+        // 3. Calculer les classes éligibles avec le vrai nom nettoyé
+        const eligible = getEligibleReenrollmentClasses(
+          currentClassNameString,
+          allClasses
+        )
+
+        setEligibleClasses(eligible)
+
+        if (eligible.length === 1) {
+          setSelectedClassId(eligible[0].id)
+        }
+      }
+    } catch (error) {
+      console.error('[ReenrollmentModal]:', error)
+      setFeedbackMessage({
+        type: 'error',
+        text: 'Impossible de vérifier la réinscription pour le moment.',
+      })
+    } finally {
+      setIsLoadingEligibility(false)
+    }
+  }
+
+  // --- SOUMISSION DU FORMULAIRE DE RÉINSCRIPTION ---
+  const handleReenrollSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!selectedClassId) return
+
+    reenrollMutation.mutate({
+      eleveId: student.id,
+      classeId: selectedClassId,
+      anneeScolaire: currentSchoolYear,
+    })
+  }
+
   const getTrancheBadge = (trancheNum: TrancheKey) => {
     const state = financialStatus.tranches[trancheNum].status
     if (state === 'Réglée') {
@@ -183,6 +275,14 @@ export default function StudentProfile({
     )
   }
 
+  if (isLoadingPayments || isLoadingConfigs) {
+    return (
+      <div className="flex justify-center py-12">
+        <Loader2 className="size-8 animate-spin text-sacred-red" />
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -190,7 +290,7 @@ export default function StudentProfile({
         subtitle="Suivi individuel de la scolarité et contrôle d'accès aux résultats."
       />
 
-      {/* 1. CARTE PROFIL ÉLÈVE */}
+      {/* 1. CARTE PROFIL ÉLÈVE AVEC BOUTON RÉINSCRIPTION */}
       <div className="p-6 rounded-3xl bg-card border border-border flex flex-col md:flex-row justify-between gap-6 items-start md:items-center">
         <div className="flex items-center gap-4">
           <div className="size-16 rounded-2xl bg-sacred-red/10 text-sacred-red grid place-items-center shrink-0">
@@ -214,19 +314,29 @@ export default function StudentProfile({
           </div>
         </div>
 
-        <div className="flex gap-4 w-full md:w-auto">
-          <div className="flex-1 md:flex-initial p-4 rounded-2xl bg-background border border-border/60 text-center md:text-left min-w-30">
-            <p className="text-xs opacity-50 font-medium">Total payé (USD)</p>
-            <p className="text-lg font-bold text-foreground mt-0.5">
-              {totals.USD} USD
-            </p>
+        <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto items-stretch sm:items-center">
+          <div className="flex gap-4">
+            <div className="flex-1 md:flex-initial p-4 rounded-2xl bg-background border border-border/60 text-center md:text-left min-w-30">
+              <p className="text-xs opacity-50 font-medium">Total payé (USD)</p>
+              <p className="text-lg font-bold text-foreground mt-0.5">
+                {totals.USD} USD
+              </p>
+            </div>
+            <div className="flex-1 md:flex-initial p-4 rounded-2xl bg-background border border-border/60 text-center md:text-left min-w-30">
+              <p className="text-xs opacity-50 font-medium">Total payé (FC)</p>
+              <p className="text-lg font-bold text-foreground mt-0.5">
+                {totals.FC} FC
+              </p>
+            </div>
           </div>
-          <div className="flex-1 md:flex-initial p-4 rounded-2xl bg-background border border-border/60 text-center md:text-left min-w-30">
-            <p className="text-xs opacity-50 font-medium">Total payé (FC)</p>
-            <p className="text-lg font-bold text-foreground mt-0.5">
-              {totals.FC} FC
-            </p>
-          </div>
+
+          <button
+            onClick={handleOpenReenrollmentModal}
+            className="flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-sacred-red text-white font-semibold shadow-md hover:bg-sacred-red/90 transition-all active:scale-[0.98] shrink-0"
+          >
+            <UserPlus className="size-5" />
+            Réinscription
+          </button>
         </div>
       </div>
 
@@ -241,42 +351,26 @@ export default function StudentProfile({
             return (
               <div
                 key={t}
-                className="p-5 rounded-2xl bg-card border border-border flex flex-col justify-between gap-4 relative overflow-hidden"
+                className="p-5 rounded-3xl bg-card border border-border space-y-3"
               >
                 <div className="flex items-center justify-between">
-                  <span className="font-bold text-sm text-foreground/80">
+                  <span className="text-sm font-bold opacity-80">
                     Tranche {t}
                   </span>
                   {getTrancheBadge(t)}
                 </div>
-                <div className="space-y-1">
-                  <p className="text-xs opacity-40">Versements enregistrés</p>
-                  <div className="font-semibold text-sm">
-                    {info.requiredUSD > 0 || info.paidUSD > 0 ? (
-                      <div>
-                        {info.paidUSD} / {info.requiredUSD} USD
-                      </div>
-                    ) : null}
-                    {info.requiredFC > 0 || info.paidFC > 0 ? (
-                      <div>
-                        {info.paidFC} / {info.requiredFC} FC
-                      </div>
-                    ) : null}
-                    {info.paidUSD === 0 &&
-                      info.paidFC === 0 &&
-                      info.requiredUSD === 0 &&
-                      info.requiredFC === 0 && (
-                        <span className="text-xs opacity-40 font-normal">
-                          Aucun frais configuré
-                        </span>
-                      )}
-                    {info.paidUSD === 0 &&
-                      info.paidFC === 0 &&
-                      (info.requiredUSD > 0 || info.requiredFC > 0) && (
-                        <span className="text-xs opacity-40 font-normal">
-                          Aucun versement
-                        </span>
-                      )}
+                <div className="space-y-1 pt-2 border-t border-border/60 text-xs">
+                  <div className="flex justify-between">
+                    <span className="opacity-60">Payé USD :</span>
+                    <span className="font-semibold">
+                      {info.paidUSD} / {info.requiredUSD} USD
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="opacity-60">Payé FC :</span>
+                    <span className="font-semibold">
+                      {info.paidFC} / {info.requiredFC} FC
+                    </span>
                   </div>
                 </div>
               </div>
@@ -285,133 +379,147 @@ export default function StudentProfile({
         </div>
       </div>
 
-      {/* 🔒 ACCÈS RESTREINT : BLOC POINTS ET BULLETINS */}
-      <div className="grid md:grid-cols-2 gap-6">
-        {/* Section Points / Notes */}
-        <div className="p-6 rounded-3xl bg-card border border-border relative">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2.5">
-              <BarChart3 className="size-5 text-sacred-red" />
-              <h3 className="font-display text-lg font-semibold">
-                Points & Évaluations
-              </h3>
-            </div>
-            {!financialStatus.isGloballyCompliant && (
-              <Lock className="size-4 text-amber-600" />
-            )}
-          </div>
-
-          {financialStatus.isGloballyCompliant ? (
-            <div className="text-sm text-muted-foreground bg-muted/30 p-4 rounded-2xl border border-border/50">
-              Visualisation des points active. Vos résultats des sessions sont
-              disponibles.
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center p-6 rounded-2xl bg-amber-500/5 border border-amber-500/20 text-center">
-              <AlertTriangle className="size-8 text-amber-600 mb-2" />
-              <p className="text-sm font-semibold text-amber-900">
-                Accès restreint
-              </p>
-              <p className="text-xs text-amber-700/80 mt-1 max-w-xs">
-                Veuillez apurer le solde de vos tranches pour débloquer l'accès
-                à vos notes de cours.
-              </p>
-            </div>
-          )}
-        </div>
-
-        {/* Section Bulletins */}
-        <div className="p-6 rounded-3xl bg-card border border-border relative">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2.5">
-              <FileText className="size-5 text-sacred-red" />
-              <h3 className="font-display text-lg font-semibold">
-                Bulletins & Périodes
-              </h3>
-            </div>
-            {!financialStatus.isGloballyCompliant && (
-              <Lock className="size-4 text-amber-600" />
-            )}
-          </div>
-
-          {financialStatus.isGloballyCompliant ? (
-            <div className="text-sm text-muted-foreground bg-muted/30 p-4 rounded-2xl border border-border/50">
-              Téléchargement disponible. Votre bulletin de fin de période est
-              prêt.
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center p-6 rounded-2xl bg-amber-500/5 border border-amber-500/20 text-center">
-              <AlertTriangle className="size-8 text-amber-600 mb-2" />
-              <p className="text-sm font-semibold text-amber-900">
-                Accès restreint
-              </p>
-              <p className="text-xs text-amber-700/80 mt-1 max-w-xs">
-                La consultation et l'impression des bulletins scolaires
-                requièrent la validation financière complète de vos tranches.
-              </p>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* 3. HISTORIQUE DES REÇUS */}
-      <div>
-        <h3 className="font-display text-lg font-semibold mb-3">
-          Détail des transactions
+      {/* 4. HISTORIQUE ET TÉLÉCHARGEMENT DES REÇUS */}
+      <div className="p-6 rounded-3xl bg-card border border-border space-y-4">
+        <h3 className="font-display text-lg font-semibold">
+          Reçus de paiement
         </h3>
-        <div className="space-y-3">
-          {isLoading ? (
-            <p className="text-sm opacity-50 text-center py-6">
-              Chargement des données...
-            </p>
-          ) : studentReceipts.length === 0 ? (
-            <p className="text-sm opacity-50 text-center py-6 border border-dashed border-border rounded-2xl bg-card/40">
-              Aucun versement n'a encore été enregistré pour cet élève cette
-              année.
-            </p>
-          ) : (
-            studentReceipts.map(r => {
-              const displayReceiptNum = `REC-${r.id.substring(0, 8).toUpperCase()}`
-              return (
-                <div
-                  key={r.id}
-                  className="p-4 rounded-2xl bg-card border border-border flex items-center justify-between gap-4 hover:border-border/80 transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="size-10 rounded-xl bg-sacred-red/10 text-sacred-red grid place-items-center shrink-0">
-                      <Receipt className="size-5" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <p className="font-semibold text-sm">
-                          {displayReceiptNum}
-                        </p>
-                        <span className="px-2 py-0.5 rounded bg-border text-[10px] font-medium opacity-80">
-                          Tranche {r.tranche}
-                        </span>
-                      </div>
-                      <p className="text-xs opacity-60 mt-0.5">
-                        Encaissé par {r.cashierName || 'Caisse'} ·{' '}
-                        {r.reason || 'Minerval'}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-semibold text-sm whitespace-nowrap">
-                      {r.amount} {r.currency || 'USD'}
-                    </p>
-                    {r.paidAt && (
-                      <p className="text-[10px] opacity-40 mt-0.5">
-                        {new Date(r.paidAt).toLocaleDateString('fr-FR')}
-                      </p>
-                    )}
-                  </div>
+
+        {studentReceipts.length === 0 ? (
+          <p className="text-sm opacity-60">
+            Aucun reçu trouvé pour cette année scolaire.
+          </p>
+        ) : (
+          <div className="divide-y divide-border">
+            {studentReceipts.map(receipt => (
+              <div
+                key={receipt.id}
+                className="py-3 flex items-center justify-between gap-4 text-sm"
+              >
+                <div>
+                  <p className="font-semibold text-foreground">
+                    Reçu #{receipt.id.slice(0, 8)}
+                  </p>
+                  <p className="text-xs opacity-60">
+                    Tranche {receipt.tranche} •{' '}
+                    {new Date(receipt.paidAt).toLocaleDateString()}
+                  </p>
                 </div>
-              )
-            })
-          )}
-        </div>
+
+                <div className="flex items-center gap-4">
+                  <span className="font-bold text-sacred-red">
+                    {receipt.amount} {receipt.currency}
+                  </span>
+
+                  {/* Bouton de Téléchargement du reçu */}
+                  <button
+                    onClick={() =>
+                      window.open(
+                        `/api/receipts/download/${receipt.id}`,
+                        '_blank'
+                      )
+                    }
+                    className="px-3 py-1.5 rounded-xl border border-border bg-background text-xs font-semibold hover:bg-muted transition-colors flex items-center gap-1.5"
+                  >
+                    Télécharger
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
+
+      {/* 3. MODALE DE RÉINSCRIPTION */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm grid place-items-center p-4">
+          <div className="w-full max-w-md rounded-3xl bg-card border border-border p-6 shadow-2xl space-y-6 relative">
+            <button
+              onClick={() => setIsModalOpen(false)}
+              className="absolute top-4 right-4 p-2 rounded-full hover:bg-muted transition-colors"
+            >
+              <X className="size-5" />
+            </button>
+
+            <div>
+              <h3 className="font-display text-xl font-bold">
+                Réinscription Scolaire
+              </h3>
+              <p className="text-sm opacity-60 mt-1">
+                Année Académique : {currentSchoolYear}
+              </p>
+            </div>
+
+            {isLoadingEligibility ? (
+              <div className="flex justify-center py-8">
+                <Loader2 className="size-6 animate-spin text-sacred-red" />
+              </div>
+            ) : !isReenrollmentOpen ? (
+              <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-start gap-3 text-amber-600">
+                <Lock className="size-5 shrink-0 mt-0.5" />
+                <p className="text-sm">
+                  Les réinscriptions ne sont pas encore ouvertes par
+                  l'administration.
+                </p>
+              </div>
+            ) : (
+              <form onSubmit={handleReenrollSubmit} className="space-y-4">
+                {feedbackMessage && (
+                  <div
+                    className={`p-3 rounded-xl text-xs font-medium ${
+                      feedbackMessage.type === 'success'
+                        ? 'bg-emerald-500/10 text-emerald-600'
+                        : 'bg-destructive/10 text-destructive'
+                    }`}
+                  >
+                    {feedbackMessage.text}
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider opacity-70 mb-2">
+                    Classe Visée
+                  </label>
+                  <select
+                    value={selectedClassId}
+                    onChange={e => setSelectedClassId(e.target.value)}
+                    className="w-full p-3 rounded-xl border border-border bg-card text-sm focus:outline-none focus:border-sacred-red"
+                    required
+                  >
+                    <option value="">Sélectionnez une classe</option>
+                    {eligibleClasses.map(c => (
+                      <option key={c.id} value={c.id}>
+                        {c.nom_classe}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex justify-end gap-3 pt-4 border-t border-border">
+                  <button
+                    type="button"
+                    onClick={() => setIsModalOpen(false)}
+                    className="px-4 py-2.5 rounded-full border border-border text-sm font-semibold hover:bg-muted"
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={reenrollMutation.isPending || !selectedClassId}
+                    className="px-6 py-2.5 rounded-full bg-sacred-red text-white text-sm font-semibold shadow-md hover:scale-105 transition-transform disabled:opacity-50"
+                  >
+                    {reenrollMutation.isPending ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      'Confirmer'
+                    )}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
