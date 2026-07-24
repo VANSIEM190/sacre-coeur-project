@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { FaFacebook, FaWhatsapp, FaTiktok } from 'react-icons/fa'
 
 export function PublicFooter() {
   return (
@@ -66,6 +67,40 @@ export function PublicFooter() {
           </p>
           <p className="text-sm opacity-70 mb-2">Kinshasa, RDC</p>
           <p className="text-sm opacity-70">contact@sacrecoeur.edu</p>
+          <div className="flex items-center gap-4 mt-3">
+            {/* Facebook */}
+            <a
+              href="https://facebook.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-1.5 rounded-full bg-card border border-border text-foreground hover:text-[#1877F2] hover:border-[#1877F2]/50 transition-colors"
+              aria-label="Facebook"
+            >
+              <FaFacebook className="size-5" />
+            </a>
+
+            {/* WhatsApp */}
+            <a
+              href="https://wa.me/810860751"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-1.5 rounded-full bg-card border border-border text-foreground hover:text-[#25D366] hover:border-[#25D366]/50 transition-colors"
+              aria-label="WhatsApp"
+            >
+              <FaWhatsapp className="size-5" />
+            </a>
+
+            {/* TikTok */}
+            <a
+              href="https://tiktok.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-1.5 rounded-full bg-card border border-border text-foreground hover:text-pink-500 hover:border-pink-500/50 transition-colors"
+              aria-label="TikTok"
+            >
+              <FaTiktok className="size-5" />
+            </a>
+          </div>
         </div>
       </div>
 

@@ -3,7 +3,7 @@ import { PageHeader } from '@/components/Dashboard-shell'
 import { useFetchData, useMutateData } from '@/hooks/useQuery'
 import { paymentService } from '@/services/finance/payment.service'
 import { filterElement } from '@/utils/filterElements'
-import type { StudentUser, PaymentTranche, PaymentReceipt } from '@/lib/types'
+import type { PaymentTranche, PaymentReceipt, EleveDetails } from '@/lib/types'
 import { Plus, Receipt, Search, Filter } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { studentService } from '@/services/student/Student.service'
@@ -14,7 +14,7 @@ const sanitizeInput = (val: string): string => {
 }
 
 // Helper pour formater le nom complet à partir des champs séparés
-const getStudentFullName = (s: Partial<StudentUser>) => {
+const getStudentFullName = (s: Partial<EleveDetails>) => {
   return [s.firstName, s.middleName, s.lastName].filter(Boolean).join(' ')
 }
 
@@ -22,7 +22,7 @@ function AdminPaiements() {
   const queryClient = useQueryClient()
 
   // 1. Récupération de TOUS les élèves (Admin)
-  const { data: students = [] } = useFetchData<StudentUser[]>(
+  const { data: students = [] } = useFetchData<EleveDetails[]>(
     ['admin', 'students-list'],
     () => studentService.getAllStudents()
   )

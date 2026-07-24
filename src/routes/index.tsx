@@ -289,7 +289,7 @@ function HomePage() {
                     Email
                   </p>
                   <p className="font-medium text-xs break-all">
-                    info@cssacrecoeurdejesus.edu
+                    contact@sacrecoeur.edu
                   </p>
                 </div>
                 <div className="bg-white/10 rounded-2xl p-4">

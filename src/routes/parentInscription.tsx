@@ -1,22 +1,10 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Formik, Form, Field, ErrorMessage } from 'formik'
-import { z } from 'zod'
 import { useState, useEffect } from 'react'
 import { useAuthStore } from '@/stores/auth-store'
-
-const parentSchema = z.object({
-  lastName: z.string().trim().min(1, 'Requis').max(60),
-  middleName: z.string().trim().min(1, 'Requis').max(60),
-  firstName: z.string().trim().min(1, 'Requis').max(60),
-  profession: z.string().trim().min(1, 'Requis').max(80),
-  guardianRelation: z.string().trim().min(1, 'Requis').max(60),
-  phone: z.string().trim().min(6, 'Requis').max(20),
-  email: z.string().trim().email('Email invalide'),
-  password: z.string().min(6, 'Min. 6 caractères'),
-})
-
-type ParentFormValues = z.infer<typeof parentSchema>
+import { parentSchema, type ParentFormValues } from '@/validators/usersSchema'
+import { validateWithZod } from '@/utils/validateWithZod'
 
 const initialValues: ParentFormValues = {
   lastName: '',
@@ -90,16 +78,7 @@ function InscriptionParentPage() {
 
         <Formik
           initialValues={initialValues}
-          validate={values => {
-            const result = parentSchema.safeParse(values)
-            if (result.success) return {}
-            const errors: Record<string, string> = {}
-            for (const issue of result.error.issues) {
-              const key = issue.path.join('.')
-              if (!errors[key]) errors[key] = issue.message
-            }
-            return errors
-          }}
+          validate={validateWithZod(parentSchema)}
           onSubmit={async (values, { setSubmitting, setStatus }) => {
             const fullName =
               `${values.firstName} ${values.middleName} ${values.lastName}`

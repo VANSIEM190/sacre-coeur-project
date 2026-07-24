@@ -5,18 +5,18 @@ import { PublicFooter } from '@/components/public-footer'
 
 const authorities = [
   {
-    name: 'Père Joseph Mwamba',
+    name: "M. l' Abbé Henock",
     role: 'Recteur Général',
     bio: "Théologien et pédagogue, dirige l'institution depuis 2015 avec un engagement profond envers l'excellence et la foi.",
   },
   {
-    name: 'Sœur Béatrice Lukusa',
-    role: 'Préfète des Études',
+    name: 'M. Leonard',
+    role: 'Préfèt des Études',
     bio: "Coordonne la pédagogie et veille à la qualité de l'enseignement dans toutes les classes.",
   },
   {
-    name: 'M. André Kabongo',
-    role: 'Directeur des Études Secondaires',
+    name: 'M. Kambamba Didier',
+    role: 'Sécraitère de lécole',
     bio: 'Supervise le cycle secondaire et accompagne les enseignants au quotidien.',
   },
   {

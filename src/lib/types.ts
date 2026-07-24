@@ -83,6 +83,22 @@ export interface EleveDetails {
   province: string
   parent_id: string
   updated_at?: string
+
+  inscriptions?: Array<{
+    id: string
+    status: 'en_attente' | 'accepte' | 'valide' | 'refuse' | 'rejete'
+    classe_id: string
+    classes?: {
+      id: string
+      nom_classe: string
+    }
+  }>
+
+  // Champs Optionnels (si tu choisis de les aplatir dans le service)
+  inscription_id?: string
+  status?: 'accepte' | 'valide' | 'en_attente' | 'refuse'
+  classe_id?: string
+  nom_classe?: string
 }
 
 export interface Inscription {

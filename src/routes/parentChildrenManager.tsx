@@ -11,17 +11,19 @@ import {
   GraduationCap,
   Loader2,
   ArrowLeft,
-  ArrowBigUp,
+  Eye,
 } from 'lucide-react'
-import { getCurrentSchoolYear } from '@/utils/getCurrentSchoolYear'
-import { studentSchema } from '@/validators/studentSchema'
+import { studentSchema, type studentType } from '@/validators/usersSchema'
 import { studentService } from '@/services/student/Student.service'
 import { useFetchData, useMutateData } from '@/hooks/useQuery'
 import type { ClassName, EleveDetails } from '@/lib/types'
 import { classService } from '@/services/classe/classe.service'
 import StudentProfile from './StudentProfile'
+import { inscriptionService } from '@/services/student/inscription.service'
+import { getCurrentSchoolYear } from '@/utils/getCurrentSchoolYear'
+import { validateWithZod } from '@/utils/validateWithZod'
 
-const initialValues = {
+const initialValues: studentType = {
   lastName: '',
   middleName: '',
   firstName: '',
@@ -35,7 +37,6 @@ const initialValues = {
   childMedicalCondition: '',
   guardianRelation: '',
   phone: '',
-  anneeScolaire: getCurrentSchoolYear(),
   previousSchoolPercentage: 0,
   currentClassName: '',
   previousSchoolName: '',
@@ -66,15 +67,24 @@ export default function ParentChildrenManager() {
 
   // 2. Mutations React Query
   const createMutation = useMutateData(
-    (
-      values: Omit<
-        EleveDetails,
-        'id' | 'status' | 'classe_id' | 'parent_id' | 'anneeScolaire'
-      >
-    ) => studentService.createStudent(values),
+    async (
+      values: Omit<EleveDetails, 'id' | 'status' | 'classe_id' | 'parent_id'>
+    ) => {
+      const newStudent = await studentService.createStudent(values)
+
+      if (values.currentClassName) {
+        await inscriptionService.createInscription({
+          eleveId: newStudent.id,
+          classeId: newStudent.currentClassName,
+          anneeScolaire: getCurrentSchoolYear(),
+        })
+      }
+      return newStudent
+    },
     {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ['students', 'parent-list'] })
+        queryClient.invalidateQueries({ queryKey: ['inscriptions'] })
         setIsModalOpen(false)
       },
     }
@@ -86,10 +96,7 @@ export default function ParentChildrenManager() {
       values,
     }: {
       id: string
-      values: Omit<
-        EleveDetails,
-        'id' | 'status' | 'classe_id' | 'parent_id' | 'anneeScolaire'
-      >
+      values: Omit<EleveDetails, 'id' | 'status' | 'classe_id' | 'parent_id'>
     }) => studentService.updateStudent(id, values),
     {
       onSuccess: () => {
@@ -168,54 +175,64 @@ export default function ParentChildrenManager() {
       ) : (
         /* LISTE DES ENFANTS */
         <div className="grid sm:grid-cols-2 gap-4">
-          {childrenList.map(child => (
-            <div
-              key={child.id}
-              className="p-6 rounded-3xl bg-card border border-border flex items-center justify-between gap-4 hover:shadow-lg transition-all"
-            >
-              <div className="space-y-1">
-                <p className="font-display text-xl text-foreground">
-                  {child.firstName} {child.middleName} {child.lastName}
-                </p>
-                <div className="flex items-center gap-2 text-xs opacity-60">
-                  <GraduationCap className="size-3.5" />
-                  <span>Classe : {child.currentClassName}</span>
+          {childrenList.map(child => {
+            const currentClassObj = classes.find(
+              cls => cls.id === child.currentClassName
+            )
+            const currentClassNameString = currentClassObj
+              ? currentClassObj.nom_classe
+              : child.currentClassName
+            return (
+              <div
+                key={child.id}
+                className="p-6 rounded-3xl bg-card border border-border flex items-center justify-between gap-4 hover:shadow-lg transition-all"
+              >
+                <div className="space-y-1">
+                  <p className="font-display text-xl text-foreground">
+                    {child.firstName} {child.middleName} {child.lastName}
+                  </p>
+                  <div className="flex items-center gap-2 text-xs opacity-60">
+                    <GraduationCap className="size-3.5" />
+                    <span>Classe : {currentClassNameString}</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setSelectedStudent(child)}
+                    className="p-2.5 rounded-xl bg-muted/40 hover:bg-muted text-foreground/80 hover:text-foreground transition-colors"
+                    title="voir le profil"
+                  >
+                    <Eye className="size-4" />
+                  </button>
+                  <button
+                    onClick={() => {
+                      setEditingStudent(child)
+                      setIsModalOpen(true)
+                    }}
+                    className="p-2.5 rounded-xl bg-muted/40 hover:bg-muted text-foreground/80 hover:text-foreground transition-colors"
+                    title="Modifier"
+                  >
+                    <Pencil className="size-4" />
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (
+                        confirm('Voulez-vous vraiment retirer ce dossier ?')
+                      ) {
+                        deleteMutation.mutate(child.id)
+                      }
+                    }}
+                    disabled={deleteMutation.isPending}
+                    className="p-2.5 rounded-xl bg-destructive/10 hover:bg-destructive text-destructive hover:text-white transition-colors disabled:opacity-50"
+                    title="Supprimer"
+                  >
+                    <Trash2 className="size-4" />
+                  </button>
                 </div>
               </div>
-
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setSelectedStudent(child)}
-                  className="p-2.5 rounded-xl bg-muted/40 hover:bg-muted text-foreground/80 hover:text-foreground transition-colors"
-                  title="voir le profil"
-                >
-                  <ArrowBigUp className="size-4" />
-                </button>
-                <button
-                  onClick={() => {
-                    setEditingStudent(child)
-                    setIsModalOpen(true)
-                  }}
-                  className="p-2.5 rounded-xl bg-muted/40 hover:bg-muted text-foreground/80 hover:text-foreground transition-colors"
-                  title="Modifier"
-                >
-                  <Pencil className="size-4" />
-                </button>
-                <button
-                  onClick={() => {
-                    if (confirm('Voulez-vous vraiment retirer ce dossier ?')) {
-                      deleteMutation.mutate(child.id)
-                    }
-                  }}
-                  disabled={deleteMutation.isPending}
-                  className="p-2.5 rounded-xl bg-destructive/10 hover:bg-destructive text-destructive hover:text-white transition-colors disabled:opacity-50"
-                  title="Supprimer"
-                >
-                  <Trash2 className="size-4" />
-                </button>
-              </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
 
@@ -254,16 +271,7 @@ export default function ParentChildrenManager() {
                 <Formik
                   initialValues={editingStudent || initialValues}
                   enableReinitialize
-                  validate={values => {
-                    const result = studentSchema.safeParse(values)
-                    if (result.success) return {}
-                    const errors: Record<string, string> = {}
-                    for (const issue of result.error.issues) {
-                      const key = issue.path.join('.')
-                      if (!errors[key]) errors[key] = issue.message
-                    }
-                    return errors
-                  }}
+                  validate={validateWithZod(studentSchema)}
                   onSubmit={values => {
                     if (editingStudent) {
                       updateMutation.mutate({ id: editingStudent.id, values })
@@ -387,11 +395,6 @@ export default function ParentChildrenManager() {
                             label="Pourcentage école précédente"
                             type="number"
                             disabled={isSubmitting}
-                          />
-                          <FormikField
-                            name="anneeScolaire"
-                            label="Année Scolaire"
-                            disabled
                           />
                         </FormGrid>
                       </div>

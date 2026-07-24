@@ -12,6 +12,7 @@ import {
   UserCheck,
   Coins,
   Settings,
+  User,
 } from 'lucide-react'
 import { DashboardShell } from '@/components/Dashboard-shell'
 
@@ -28,6 +29,7 @@ const adminNavItems = [
   { to: '/admin/paiements', label: 'Paiements', icon: CreditCard },
   { to: '/admin/mode-de-paiement', label: 'mode de paiement', icon: Coins },
   { to: '/admin/parametre', label: 'Paramètre', icon: Settings },
+  { to: '/admin/profile', label: 'Profil', icon: User },
 ]
 
 function AdminLayout() {

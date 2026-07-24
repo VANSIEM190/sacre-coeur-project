@@ -40,6 +40,7 @@ import { Toaster } from 'sonner'
 import ParentChildrenManager from './routes/parentChildrenManager'
 import AdminFixationPaiement from './routes/admin.fixatiionPaiement'
 import AdminSettings from './routes/admin.settings'
+import UserProfileSettings from './routes/userProfileSettings'
 
 function NotFound() {
   return (
@@ -106,6 +107,7 @@ export default function App() {
           <Route path="palmares" element={<AdminPalmares />} />
           <Route path="validations" element={<AdminValidations />} />
           <Route path="parametre" element={<AdminSettings />} />
+          <Route path="profile" element={<UserProfileSettings />} />
         </Route>
 
         <Route path="/parent" element={<ParentLayout />}>
@@ -114,6 +116,7 @@ export default function App() {
           <Route path="cours" element={<ParentCours />} />
           <Route path="horaires" element={<ParentHoraires />} />
           <Route path="mesEnfants" element={<ParentChildrenManager />} />
+          <Route path="profile" element={<UserProfileSettings />} />
         </Route>
 
         <Route path="/teacher" element={<TeacherLayout />}>
@@ -121,6 +124,7 @@ export default function App() {
           <Route path="classes" element={<TeacherClasses />} />
           <Route path="cotations" element={<TeacherCotations />} />
           <Route path="horaires" element={<TeacherHoraires />} />
+          <Route path="profile" element={<UserProfileSettings />} />
         </Route>
 
         <Route path="*" element={<NotFound />} />
