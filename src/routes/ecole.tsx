@@ -4,12 +4,10 @@ import { PublicHeader } from '@/components/public-header'
 import { PublicFooter } from '@/components/public-footer'
 
 // Assets
-import schoolBuilding from '@/assets/vrai-batiment.jpg'
 import sceanceGym from '@/assets/sceancegym.jpeg'
 import igfImage from '@/assets/igfImg.jpg'
 import studentsGroup from '@/assets/vrais-eleves.jpg'
 import schoolOffice from '@/assets/vrai-bureau.jpg'
-import classeVideo from '@/assets/videoSortieIGF.mp4'
 
 // Types
 export type Category =
@@ -34,7 +32,7 @@ export interface GalleryItem {
 const GALLERY_ITEMS: GalleryItem[] = [
   {
     id: 1,
-    src: schoolOffice,
+    src: '/diplome.jpeg',
     title: 'Jury et délibération',
     text: 'Rigueur et équité lors de l’évaluation finale des résultats scolaires.',
     category: 'deliberation',
@@ -42,7 +40,7 @@ const GALLERY_ITEMS: GalleryItem[] = [
   {
     id: 2,
     src: igfImage,
-    videoSrc: classeVideo,
+    videoSrc: '/videoSortieIGF.mp4',
     title: 'Pédagogie active en classe',
     text: 'Découvrez en images et en mouvement nos méthodes d’enseignement interactives.',
     category: 'classe',
@@ -56,31 +54,95 @@ const GALLERY_ITEMS: GalleryItem[] = [
   },
   {
     id: 4,
-    src: schoolOffice,
-    title: 'Les bureaux administratifs',
-    text: 'Une équipe engagée et toujours disponible.',
-    category: 'administration',
+    src: '/diplome.jpeg',
+    title: 'Félicitations à la promotion 2024-2025',
+    text: "Retour en images sur un moment fort : le couronnement de plusieurs années d'efforts, de passion et de détermination. Nous sommes fiers de célébrer la réussite de nos nouveaux diplômés alors qu'ils s'apprêtent à relever de nouveaux défis professionnels.",
+    category: 'deliberation',
   },
   {
     id: 5,
-    src: igfImage,
-    title: 'Visites guidées et découvertes',
-    text: 'Nos élèves sur le terrain pour lier théorie et réalité.',
-    category: 'sortie',
+    src: '/diplome2.jpeg',
+    title: 'Jour 1 : Retour sur le lancement des épreuves (2025)',
+    text: "Stress, concentration et ambition étaient au rendez-vous. Nos candidats avaient affronté les premières épreuves de l'Examen d'État avec sérénité et détermination. Un moment fort qui a marqué le début de leur réussite.",
+    category: 'deliberation',
   },
   {
     id: 6,
-    src: studentsGroup,
-    title: 'Immersion professionnelle',
-    text: 'Nos finalistes en situation réelle lors de leurs stages.',
-    category: 'stage',
+    src: '/diplome3.jpeg',
+    title: 'Jour 4 : Libérés et accomplis',
+    text: "Clap de fin pour l'Examen d'État 2025 ! Après quatre jours d'effort intense et de concentration, l'émotion et la joie se lisaient sur tous les visages à la sortie de la dernière épreuve. Une grande étape franchie avec fierté.",
+    category: 'eleves',
   },
   {
     id: 7,
-    src: studentsGroup,
-    title: 'Célébration des cultures',
-    text: 'Une journée dédiée au partage et à la diversité.',
-    category: 'culture',
+    src: '/sortieIGF.jpeg',
+    title: "Sortie pédagogique à l'IGF",
+    text: "Nos élèves en pleine immersion à l'Inspection Générale des Finances pour lier la théorie de la classe à la réalité des institutions.",
+    category: 'sortie',
+  },
+  {
+    id: 8,
+    src: '/photoIGF.jpeg',
+    title: "Sortie pédagogique à l'IGF",
+    text: "Nos élèves en pleine immersion à l'Inspection Générale des Finances pour lier la théorie de la classe à la réalité des institutions.",
+    category: 'sortie',
+  },
+  {
+    id: 9,
+    src: '/sortie2.jpeg',
+    title: "Sortie pédagogique à l'IGF",
+    text: "Nos élèves en pleine immersion à l'Inspection Générale des Finances pour lier la théorie de la classe à la réalité des institutions.",
+    category: 'sortie',
+  },
+  {
+    id: 8,
+    src: igfImage,
+    videoSrc: '/interview2.mp4',
+    title: "Sortie pédagogique à l'IGF",
+    text: "Nos élèves en pleine immersion à l'Inspection Générale des Finances pour lier la théorie de la classe à la réalité des institutions.",
+    category: 'sortie',
+  },
+  {
+    id: 8,
+    src: '/photoIGF.jpeg',
+    title: "Sortie pédagogique à l'IGF",
+    text: "Nos élèves en pleine immersion à l'Inspection Générale des Finances pour lier la théorie de la classe à la réalité des institutions.",
+    category: 'sortie',
+  },
+  {
+    id: 8,
+    src: '/photoIGF.jpeg',
+    title: "Sortie pédagogique à l'IGF",
+    text: "Nos élèves en pleine immersion à l'Inspection Générale des Finances pour lier la théorie de la classe à la réalité des institutions.",
+    category: 'sortie',
+  },
+  {
+    id: 8,
+    src: '/photoIGF.jpeg',
+    title: "Sortie pédagogique à l'IGF",
+    text: "Nos élèves en pleine immersion à l'Inspection Générale des Finances pour lier la théorie de la classe à la réalité des institutions.",
+    category: 'sortie',
+  },
+  {
+    id: 8,
+    src: '/photoIGF.jpeg',
+    title: "Sortie pédagogique à l'IGF",
+    text: "Nos élèves en pleine immersion à l'Inspection Générale des Finances pour lier la théorie de la classe à la réalité des institutions.",
+    category: 'sortie',
+  },
+  {
+    id: 8,
+    src: '/emphie2.jpeg',
+    title: "Sortie pédagogique à l'IGF",
+    text: "Nos élèves en pleine immersion à l'Inspection Générale des Finances pour lier la théorie de la classe à la réalité des institutions.",
+    category: 'sortie',
+  },
+  {
+    id: 8,
+    src: '/emphie.jpeg',
+    title: "Sortie pédagogique à l'IGF",
+    text: "Nos élèves en pleine immersion à l'Inspection Générale des Finances pour lier la théorie de la classe à la réalité des institutions.",
+    category: 'sortie',
   },
 ]
 
@@ -95,31 +157,40 @@ const FILTER_BUTTONS: { label: string; value: Category }[] = [
   { label: 'Journée Culturelle', value: 'culture' },
 ]
 
-const ITEMS_PER_PAGE = 12 // Nombre d'éléments affichés par page pour préserver le DOM
+const ITEMS_PER_PAGE = 12
 
 export default function EcolePage() {
   const [activeFilter, setActiveFilter] = useState<Category>('all')
   const [currentPage, setCurrentPage] = useState<number>(1)
   const [selectedItem, setSelectedItem] = useState<GalleryItem | null>(null)
 
+  // État spécifiquement pour le Plein Écran du Bâtiment
+  const [isBuildingFullscreen, setIsBuildingFullscreen] = useState(false)
+
   useEffect(() => {
     document.title = 'Sacré Cœur de Jésus - Notre École'
   }, [])
 
-  // Remettre à la page 1 lors du changement de filtre
+  // Fermer le plein écran avec la touche Échap
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsBuildingFullscreen(false)
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
+
   const handleFilterChange = (category: Category) => {
     setActiveFilter(category)
     setCurrentPage(1)
   }
 
-  // Filtrage mémoïsé
   const filteredItems = useMemo(() => {
     return GALLERY_ITEMS.filter(
       item => activeFilter === 'all' || item.category === activeFilter
     )
   }, [activeFilter])
 
-  // Pagination calculée
   const totalPages = Math.ceil(filteredItems.length / ITEMS_PER_PAGE)
   const paginatedItems = useMemo(() => {
     const start = (currentPage - 1) * ITEMS_PER_PAGE
@@ -146,6 +217,51 @@ export default function EcolePage() {
               <span className="italic text-sacred-red">communauté</span>, une
               mission.
             </h1>
+
+            {/* CARTE DÉDIÉE AU BÂTIMENT DE L'ÉCOLE */}
+            <div
+              onClick={() => setIsBuildingFullscreen(true)}
+              className="group relative my-8 rounded-2xl border border-border/50 overflow-hidden shadow-md cursor-pointer bg-black"
+            >
+              {/* Image de fond */}
+              <img
+                src="/batiment-ecole.jpeg"
+                alt="Bâtiment Sacré Cœur de Jésus"
+                className="w-full h-[380px] sm:h-[450px] object-cover transition-transform duration-500 group-hover:scale-105"
+              />
+
+              {/* Badge discret en haut à droite */}
+              <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-white text-xs px-3 py-1.5 rounded-full font-medium border border-white/20 shadow-sm z-10">
+                🔍 Clic pour plein écran
+              </div>
+
+              {/* Overlay sombre au survol pour améliorer la lisibilité du texte */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
+              {/* Bloc de texte + bouton qui apparaît au survol */}
+              <div className="absolute bottom-0 left-0 right-0 p-6 flex flex-col sm:flex-row sm:items-end justify-between gap-4 text-white opacity-0 translate-y-3 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 z-10">
+                <div>
+                  <h2 className="font-display font-semibold text-xl text-white">
+                    Notre Établissement — Sacré Cœur de Jésus
+                  </h2>
+                  <p className="text-sm text-white/80 mt-1 max-w-2xl leading-relaxed">
+                    Découvrez le cadre d'apprentissage moderne et accueillant
+                    dans lequel nos élèves évoluent au quotidien.
+                  </p>
+                </div>
+
+                <button
+                  onClick={e => {
+                    e.stopPropagation()
+                    setIsBuildingFullscreen(true)
+                  }}
+                  className="shrink-0 px-4 py-2.5 rounded-xl bg-sacred-red text-white text-xs font-medium hover:bg-sacred-red/90 transition-colors shadow-lg self-start sm:self-auto"
+                >
+                  Agrandir l'image
+                </button>
+              </div>
+            </div>
+
             <p className="text-base md:text-lg opacity-70 max-w-2xl leading-relaxed">
               Explorez la vie au quotidien du Sacré Cœur de Jésus à travers
               notre médiathèque.
@@ -154,7 +270,7 @@ export default function EcolePage() {
         </div>
       </section>
 
-      {/* Section Galerie Optimisée */}
+      {/* Section Galerie (Comportement original inchangé) */}
       <section className="pb-24 px-6">
         <div className="max-w-7xl mx-auto">
           {/* Barre de filtres */}
@@ -177,7 +293,7 @@ export default function EcolePage() {
             })}
           </div>
 
-          {/* Grille Responsive Performante */}
+          {/* Grille Galerie Originale */}
           <motion.div
             layout
             className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"
@@ -196,7 +312,6 @@ export default function EcolePage() {
                     onClick={() => setSelectedItem(item)}
                     className="group relative cursor-pointer overflow-hidden rounded-2xl bg-muted/30 border border-border/40 shadow-sm hover:shadow-xl transition-all duration-300"
                   >
-                    {/* Vignette Média */}
                     <div className="aspect-[4/3] w-full overflow-hidden bg-black/5 relative">
                       <img
                         src={item.src}
@@ -205,7 +320,6 @@ export default function EcolePage() {
                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                       />
 
-                      {/* Badge Vidéo */}
                       {hasVideo && (
                         <span className="absolute top-3 left-3 bg-black/70 backdrop-blur-md text-white text-[10px] font-semibold tracking-wider px-2.5 py-1 rounded-full flex items-center gap-1.5">
                           <span className="size-2 rounded-full bg-sacred-red animate-pulse" />
@@ -257,7 +371,62 @@ export default function EcolePage() {
         </div>
       </section>
 
-      {/* Lightbox / Modal d'inspection Média */}
+      {/* --- MODAL PLEIN ÉCRAN POUR BATIMENT-ECOLE.JPEG --- */}
+      <AnimatePresence>
+        {isBuildingFullscreen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setIsBuildingFullscreen(false)}
+            className="fixed inset-0 z-50 bg-black/95 backdrop-blur-lg flex flex-col justify-between p-4 md:p-8 cursor-zoom-out"
+          >
+            {/* Entête */}
+            <div className="flex justify-between items-center text-white z-10">
+              <div>
+                <h3 className="text-lg font-semibold">
+                  Bâtiment du Sacré Cœur de Jésus
+                </h3>
+                <p className="text-xs text-white/70">
+                  Vue d'ensemble de nos infrastructures
+                </p>
+              </div>
+              <button
+                onClick={() => setIsBuildingFullscreen(false)}
+                className="bg-white/10 hover:bg-white/20 text-white rounded-full px-4 py-2 transition-colors text-xs font-medium border border-white/10"
+              >
+                ✕ Réduire
+              </button>
+            </div>
+
+            {/* Image Plein Écran */}
+            <div
+              className="flex-1 flex items-center justify-center my-4 overflow-hidden"
+              onClick={e => e.stopPropagation()}
+            >
+              <motion.img
+                initial={{ scale: 0.9 }}
+                animate={{ scale: 1 }}
+                exit={{ scale: 0.9 }}
+                transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                src="/batiment-ecole.jpeg"
+                alt="Bâtiment en plein écran"
+                className="max-w-full max-h-[85vh] object-contain rounded-xl shadow-2xl"
+              />
+            </div>
+
+            <div className="text-center text-xs text-white/50">
+              Cliquez n'importe où autour de l'image ou appuyez sur{' '}
+              <kbd className="px-1.5 py-0.5 bg-white/20 rounded text-[10px]">
+                Échap
+              </kbd>{' '}
+              pour revenir.
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* --- MODAL CLASSIQUE DE LA GALERIE --- */}
       <AnimatePresence>
         {selectedItem && (
           <motion.div
@@ -274,7 +443,6 @@ export default function EcolePage() {
               onClick={e => e.stopPropagation()}
               className="bg-background max-w-4xl w-full rounded-3xl overflow-hidden shadow-2xl border border-border flex flex-col md:flex-row max-h-[90vh]"
             >
-              {/* Zone Média Plein Écran */}
               <div className="md:w-2/3 bg-black flex items-center justify-center relative min-h-[300px]">
                 {selectedItem.videoSrc ? (
                   <video
@@ -293,7 +461,6 @@ export default function EcolePage() {
                 )}
               </div>
 
-              {/* Détails du Média */}
               <div className="md:w-1/3 p-6 flex flex-col justify-between bg-card">
                 <div>
                   <span className="text-sacred-red font-semibold text-xs uppercase tracking-wider block mb-2">
