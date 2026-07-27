@@ -1,41 +1,72 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { PageHeader } from '@/components/Dashboard-shell'
 import { useAuthStore } from '@/stores/auth-store'
-import type { TeacherUser, StudentUser } from '@/lib/types'
-import { useFetchData } from '@/hooks/useQuery'
+import type { TeacherUser, EleveDetails } from '@/lib/types'
+import { useFetchData, useMutateData } from '@/hooks/useQuery'
+import { useQueryClient } from '@tanstack/react-query'
 import { classService } from '@/services/classe/classe.service'
+import { teacherService } from '@/services/teacher/teacher.service'
+import { gradeService, type GradeEntry } from '@/services/grade/grade.service'
+import { SupabaseErrorHandler } from '@/services/core/Supabase.error.handler'
 import { filterElement } from '@/utils/filterElements'
-import { ArrowLeft, Loader2, Search } from 'lucide-react'
+import { ArrowLeft, Loader2, Search, X } from 'lucide-react'
+import { toast } from 'sonner'
+
+// À adapter selon les matières réellement enseignées dans ton établissement
+const SUBJECTS = [
+  'Mathématiques',
+  'Français',
+  'Sciences',
+  'Anglais',
+  'Histoire-Géographie',
+  'Éducation civique',
+]
+
+const CURRENT_SCHOOL_YEAR = '2025-2026' // idéalement centralisé quelque part
 
 function TeacherClasses() {
-  // Écrans et sélection de classes (Design calqué sur AdminClasses)
+  const queryClient = useQueryClient()
   const [selected, setSelected] = useState<string | null>(null)
   const [selectedIdClasse, setSelectedIdClasse] = useState<string>('')
   const [studentSearchQuery, setStudentSearchQuery] = useState('')
 
-  // 1. REQUÊTE : On récupère toutes les classes
+  // --- MODAL BULLETIN ---
+  const [gradeModalStudent, setGradeModalStudent] =
+    useState<EleveDetails | null>(null)
+  const [subject, setSubject] = useState(SUBJECTS[0])
+  const [tranche, setTranche] = useState<1 | 2 | 3>(1)
+  const [score, setScore] = useState<string>('')
+  const [maxScore, setMaxScore] = useState<string>('20')
+
+  const currentUser = useAuthStore(s => s.currentUser) as TeacherUser
+
+  const { data: freshTeacherData, isLoading: isLoadingTeacher } = useFetchData(
+    ['teacherProfile', currentUser?.email],
+    () => teacherService.getDetailsByEmail(currentUser.email),
+    { enabled: !!currentUser?.email }
+  )
+
   const {
     data: allClasses = [],
     isLoading: isLoadingClasses,
     isError: isClassesError,
   } = useFetchData(['classes'], classService.getAllClasses)
 
-  // 2. AUTH : On récupère le profil de l'enseignant connecté
-  const teacher = useAuthStore(s => s.currentUser) as TeacherUser
+  const assignedclasses = useMemo(
+    () => freshTeacherData?.assignedclasses || [],
+    [freshTeacherData]
+  )
 
-  // 3. FILTRAGE : Classes attribuées à l'enseignant
   const assignedClasses = useMemo(() => {
-    if (!teacher?.assignedclasses || !allClasses) return []
-    return allClasses.filter(cls => teacher.assignedclasses.includes(cls.id))
-  }, [allClasses, teacher])
+    if (!assignedclasses.length || !allClasses) return []
+    return allClasses.filter(cls => assignedclasses.includes(cls.id))
+  }, [allClasses, assignedclasses])
 
-  // 4. SÉCURITÉ : Vérification d'habilitation stricte côté client
   const isAuthorized = useMemo(() => {
-    if (!selectedIdClasse || !teacher?.assignedclasses) return false
-    return teacher.assignedclasses.includes(selectedIdClasse)
-  }, [selectedIdClasse, teacher])
+    if (!selectedIdClasse || !assignedclasses.length) return false
+    return assignedclasses.includes(selectedIdClasse)
+  }, [selectedIdClasse, assignedclasses])
 
-  // 5. REQUÊTE : Récupération sécurisée des élèves de la classe sélectionnée
   const {
     data: studentsData = [],
     isLoading: isLoadingStudents,
@@ -46,20 +77,88 @@ function TeacherClasses() {
       if (!isAuthorized) throw new Error('Accès non autorisé à cette classe.')
       return classService.getStudentsInClass(selectedIdClasse)
     },
-    {
-      enabled: !!selectedIdClasse && isAuthorized,
-    }
+    { enabled: !!selectedIdClasse && isAuthorized }
   )
 
-  // 6. FILTRAGE TEXTUEL : Application de filterElement sur les élèves
   const filteredStudents = useMemo(() => {
-    return filterElement<StudentUser>({
+    return filterElement<EleveDetails>({
       items: studentsData,
       keys: ['lastName', 'firstName'],
       searchQuery: studentSearchQuery,
       selectedValue: 'Tous',
     })
   }, [studentsData, studentSearchQuery])
+
+  // --- RÉCUPÉRATION DE LA NOTE EXISTANTE (pré-remplissage) ---
+  const { data: existingGrade, isLoading: isLoadingGrade } = useFetchData(
+    ['grade', gradeModalStudent?.id, subject, tranche],
+    () =>
+      gradeService.getGrade(
+        gradeModalStudent!.id,
+        subject,
+        tranche,
+        CURRENT_SCHOOL_YEAR
+      ),
+    { enabled: !!gradeModalStudent }
+  )
+
+  // Synchronise le formulaire avec la note existante (ou le vide) à chaque changement de matière/tranche/élève
+  useEffect(() => {
+    if (existingGrade) {
+      setScore(String(existingGrade.score))
+      setMaxScore(String(existingGrade.max_score))
+    } else {
+      setScore('')
+      setMaxScore('20')
+    }
+  }, [existingGrade])
+
+  const saveGradeMutation = useMutateData(
+    (entry: GradeEntry) => gradeService.saveGrade(entry),
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries({
+          queryKey: ['grade', gradeModalStudent?.id, subject, tranche],
+        })
+        toast.success('Note enregistrée')
+      },
+      onError: err => SupabaseErrorHandler.handle(err),
+    }
+  )
+
+  const handleOpenGradeModal = (student: EleveDetails) => {
+    setGradeModalStudent(student)
+    setSubject(SUBJECTS[0])
+    setTranche(1)
+  }
+
+  const handleSaveGrade = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!gradeModalStudent || !currentUser?.id) return
+
+    const numericScore = Number(score)
+    const numericMax = Number(maxScore)
+
+    if (Number.isNaN(numericScore) || Number.isNaN(numericMax)) {
+      toast.error('Note ou barème invalide.')
+      return
+    }
+    if (numericScore > numericMax) {
+      toast.error('La note ne peut pas dépasser le barème.')
+      return
+    }
+
+    saveGradeMutation.mutate({
+      eleve_id: gradeModalStudent.id,
+      classe_id: selectedIdClasse,
+      teacher_id: currentUser.id,
+      subject,
+      tranche,
+      score: numericScore,
+      max_score: numericMax,
+      school_year: CURRENT_SCHOOL_YEAR,
+    })
+  }
 
   // --- VUE DÉTAILLÉE : LISTE DES ÉLÈVES DE LA CLASSE SÉLECTIONNÉE ---
   if (selected) {
@@ -103,7 +202,6 @@ function TeacherClasses() {
           subtitle={`${filteredStudents.length} élève(s) trouvé(s)`}
         />
 
-        {/* Zone de recherche / filtrage des élèves */}
         <div className="p-5 rounded-3xl bg-card border border-border mb-6">
           <div className="relative w-full">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 size-4 opacity-50" />
@@ -117,12 +215,13 @@ function TeacherClasses() {
           </div>
         </div>
 
-        {/* Liste des élèves filtrés */}
         <div className="grid sm:grid-cols-2 gap-2">
           {filteredStudents.map(student => (
-            <div
+            <button
               key={student.id}
-              className="p-4 rounded-2xl bg-card border border-border flex flex-col justify-center"
+              type="button"
+              onClick={() => handleOpenGradeModal(student)}
+              className="p-4 rounded-2xl bg-card border border-border flex flex-col justify-center text-left hover:border-primary hover:shadow-md transition-all"
             >
               <p className="font-semibold">
                 {student.lastName} {student.firstName}
@@ -132,7 +231,7 @@ function TeacherClasses() {
                   {student.phone}
                 </p>
               )}
-            </div>
+            </button>
           ))}
 
           {filteredStudents.length === 0 && (
@@ -141,6 +240,135 @@ function TeacherClasses() {
             </p>
           )}
         </div>
+
+        {/* MODAL : BULLETIN DE SAISIE DE NOTE */}
+        {gradeModalStudent && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-fade-in">
+            <div className="w-full max-w-md p-6 rounded-3xl bg-card border border-border shadow-2xl space-y-4 animate-scale-in">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-display text-lg font-semibold">
+                    Saisir une note
+                  </h3>
+                  <p className="text-xs opacity-60">
+                    {gradeModalStudent.lastName} {gradeModalStudent.firstName}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setGradeModalStudent(null)}
+                  className="size-8 rounded-full border border-border grid place-items-center hover:bg-muted transition-colors"
+                >
+                  <X className="size-4" />
+                </button>
+              </div>
+
+              <form className="space-y-4" onSubmit={handleSaveGrade}>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs uppercase tracking-widest opacity-70 mb-1 block">
+                      Matière
+                    </label>
+                    <select
+                      value={subject}
+                      onChange={e => setSubject(e.target.value)}
+                      className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:outline-none focus:border-primary"
+                    >
+                      {SUBJECTS.map(s => (
+                        <option key={s} value={s}>
+                          {s}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-xs uppercase tracking-widest opacity-70 mb-1 block">
+                      Tranche
+                    </label>
+                    <select
+                      value={tranche}
+                      onChange={e =>
+                        setTranche(Number(e.target.value) as 1 | 2 | 3)
+                      }
+                      className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:outline-none focus:border-primary"
+                    >
+                      <option value={1}>1ère tranche</option>
+                      <option value={2}>2ème tranche</option>
+                      <option value={3}>3ème tranche</option>
+                    </select>
+                  </div>
+                </div>
+
+                {isLoadingGrade ? (
+                  <div className="flex items-center gap-2 py-2 text-xs opacity-60">
+                    <Loader2 className="size-4 animate-spin text-primary" />
+                    <span>Vérification d'une note existante...</span>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs uppercase tracking-widest opacity-70 mb-1 block">
+                        Note obtenue
+                      </label>
+                      <input
+                        type="number"
+                        step="0.5"
+                        min="0"
+                        value={score}
+                        onChange={e => setScore(e.target.value)}
+                        required
+                        className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:outline-none focus:border-primary"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs uppercase tracking-widest opacity-70 mb-1 block">
+                        Barème
+                      </label>
+                      <input
+                        type="number"
+                        step="1"
+                        min="1"
+                        value={maxScore}
+                        onChange={e => setMaxScore(e.target.value)}
+                        required
+                        className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:outline-none focus:border-primary"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {existingGrade && (
+                  <p className="text-xs opacity-50 italic">
+                    Une note existe déjà pour cette matière/tranche — elle sera
+                    remplacée.
+                  </p>
+                )}
+
+                <div className="flex items-center justify-end gap-2 pt-2 border-t border-border/40">
+                  <button
+                    type="button"
+                    onClick={() => setGradeModalStudent(null)}
+                    className="px-4 py-2 rounded-full border border-border text-xs font-medium hover:bg-muted transition-colors"
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={saveGradeMutation.isPending}
+                    className="px-4 py-2 rounded-full bg-sacred-red text-white text-xs font-semibold flex items-center gap-1.5 hover:opacity-90 transition-opacity disabled:opacity-50"
+                  >
+                    {saveGradeMutation.isPending ? (
+                      <Loader2 className="size-3 animate-spin" />
+                    ) : (
+                      <span>Enregistrer</span>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
       </div>
     )
   }
@@ -153,7 +381,7 @@ function TeacherClasses() {
         subtitle="Classes qui vous ont été attribuées pour l'année en cours."
       />
 
-      {isLoadingClasses ? (
+      {isLoadingClasses || isLoadingTeacher ? (
         <div className="flex flex-col items-center justify-center py-24 gap-3 opacity-60">
           <Loader2 className="size-8 animate-spin text-primary" />
           <p className="text-sm">Chargement de vos classes...</p>

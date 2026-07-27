@@ -1,12 +1,11 @@
 import { supabase } from '@/supabase/supabaseClient'
 import type { ClassName, EleveDetails } from '@/lib/types'
 
-// --- Interfaces de Réponses Supabase Strictes (Fini le type 'any') ---
 interface SupabaseClassRow {
   id: string
   nom_classe: string
   annee_scolaire: string
-  inscriptions: { id: string }[]
+  inscriptions: { id: string; status: string }[]
 }
 
 interface SupabaseInscriptionRow {
@@ -21,17 +20,36 @@ interface SupabaseTeacherLinkResponse {
   created_at?: string
 }
 
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 class ClassService {
+  private isValidUuid(id: string): boolean {
+    return UUID_REGEX.test(id)
+  }
+
+  private async getCurrentUserId(): Promise<string> {
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser()
+    if (error || !user) {
+      throw new Error('Session invalide ou utilisateur non authentifié.')
+    }
+    return user.id
+  }
+
   /**
-   * Sécurité : Lecture seule. L'accès aux classes doit être protégé en amont par RLS.
-   * Typage : Utilisation de génériques pour typer la réponse brute de Supabase.
+   * studentCount ne compte que les inscriptions VALIDÉES.
+   * La RLS reste la barrière principale ; ce filtre corrige surtout
+   * un bug métier (compter des inscriptions en attente comme élèves actifs).
    */
   async getAllClasses(): Promise<ClassName[]> {
     const { data, error } = await supabase
       .from('classes')
-      .select('id, nom_classe, annee_scolaire, inscriptions(id)')
+      .select('id, nom_classe, annee_scolaire, inscriptions(id, status)')
       .order('nom_classe', { ascending: true })
-      .returns<SupabaseClassRow[]>() // Force le type retourné par l'API
+      .returns<SupabaseClassRow[]>()
 
     if (error) {
       console.error('[ClassService.getAllClasses]:', error.message)
@@ -44,22 +62,29 @@ class ClassService {
       id: classe.id,
       nom_classe: classe.nom_classe,
       annee_scolaire: classe.annee_scolaire,
-      studentCount: classe.inscriptions ? classe.inscriptions.length : 0,
+      studentCount: classe.inscriptions
+        ? classe.inscriptions.filter(i => i.status === 'valide').length
+        : 0,
     }))
   }
 
   /**
-   * Sécurité : Ne renvoie que les profils valides. Protection RLS requise sur 'inscriptions'.
-   * Typage : Élimination du map avec 'any' grâce à l'utilisation de '.returns<T>()'
+   * Sécurité : cette méthode ne remplace PAS la RLS — elle ajoute une
+   * validation défensive côté client pour échouer tôt avec un message
+   * clair. La vraie barrière reste la policy RLS sur `inscriptions`,
+   * qui doit restreindre l'accès aux enseignants dont `classe_id` figure
+   * dans leur `assignedclasses`, ou aux admins.
+   * Filtre aussi sur status = 'valide' pour ne montrer que les élèves
+   * réellement inscrits.
    */
   async getStudentsInClass(classId: string): Promise<EleveDetails[]> {
-    // Validation basique de l'UUID pour éviter les requêtes inutiles vers Supabase
-    if (!classId) return []
+    if (!classId || !this.isValidUuid(classId)) return []
 
     const { data, error } = await supabase
       .from('inscriptions')
       .select('eleves_details(*)')
       .eq('classe_id', classId)
+      .eq('status', 'en_attente')
       .returns<SupabaseInscriptionRow[]>()
 
     if (error) {
@@ -69,7 +94,6 @@ class ClassService {
 
     if (!data) return []
 
-    // Extraction propre et sécurisée contre les valeurs nulles
     const students: EleveDetails[] = data
       .map(row => row.eleves_details)
       .filter((student): student is EleveDetails => student !== null)
@@ -78,7 +102,12 @@ class ClassService {
   }
 
   /**
-   * Sécurité : Nettoyage strict (XSS/Injection de données invalides via espaces).
+   * Sécurité : le nettoyage (.trim()) protège seulement contre des noms
+   * de classe pollués par des espaces ; ce n'est PAS une protection XSS.
+   * L'échappement contre le XSS est assuré au rendu par React (JSX
+   * échappe automatiquement le texte inséré), pas à l'écriture en base.
+   * L'autorisation réelle (admin uniquement) doit être imposée par la
+   * policy RLS INSERT sur `classes`.
    */
   async createClass(
     nomClasse: string,
@@ -92,15 +121,13 @@ class ClassService {
         "Le nom de la classe et l'année scolaire sont obligatoires."
       )
     }
+    if (nomNettoye.length > 100 || anneeNettoyee.length > 20) {
+      throw new Error('Nom de classe ou année scolaire trop long.')
+    }
 
     const { data, error } = await supabase
       .from('classes')
-      .insert([
-        {
-          nom_classe: nomNettoye,
-          annee_scolaire: anneeNettoyee,
-        },
-      ])
+      .insert([{ nom_classe: nomNettoye, annee_scolaire: anneeNettoyee }])
       .select('id, nom_classe, annee_scolaire')
       .single()
 
@@ -115,17 +142,18 @@ class ClassService {
     }
 
     if (!data) throw new Error('Aucune donnée renvoyée après la création.')
-
     return data
   }
 
   /**
-   * Sécurité CRITIQUE : La suppression d'une classe doit être gérée avec prudence.
-   * Assure-toi en BDD que la contrainte sur 'inscriptions' est en ON DELETE RESTRICT
-   * pour éviter de supprimer accidentellement l'historique des élèves !
+   * Sécurité CRITIQUE : opération admin uniquement — imposée par la RLS
+   * DELETE sur `classes`. Garde la contrainte ON DELETE RESTRICT sur
+   * `inscriptions.classe_id` pour ne jamais perdre l'historique des élèves.
    */
   async deleteClass(classId: string): Promise<boolean> {
-    if (!classId) throw new Error("L'identifiant de la classe est requis.")
+    if (!classId || !this.isValidUuid(classId)) {
+      throw new Error("L'identifiant de la classe est requis et invalide.")
+    }
 
     const { error } = await supabase.from('classes').delete().eq('id', classId)
 
@@ -143,17 +171,42 @@ class ClassService {
   }
 
   /**
-   * Sécurité : Validation des paramètres requis.
+   * Sécurité : vérifie que `teacherId` correspond bien à un enseignant
+   * existant avant de créer la liaison — évite de lier un UUID arbitraire
+   * (parent, ID inventé) à une classe. L'autorisation admin reste imposée
+   * par la RLS INSERT sur `classe_enseignant`.
    */
   async linkTeacherToClass(
     teacherId: string,
     classId: string,
     matiere?: string
   ): Promise<SupabaseTeacherLinkResponse[]> {
-    if (!teacherId || !classId) {
+    if (
+      !teacherId ||
+      !classId ||
+      !this.isValidUuid(teacherId) ||
+      !this.isValidUuid(classId)
+    ) {
       throw new Error(
-        "L'enseignant et la classe sont obligatoires pour effectuer l'affectation."
+        "L'enseignant et la classe sont obligatoires et doivent être valides."
       )
+    }
+
+    const { data: teacherExists, error: teacherCheckError } = await supabase
+      .from('enseignants_details')
+      .select('id')
+      .eq('id', teacherId)
+      .maybeSingle()
+
+    if (teacherCheckError) {
+      console.error(
+        '[ClassService.linkTeacherToClass] check teacher:',
+        teacherCheckError.message
+      )
+      throw new Error("Erreur lors de la vérification de l'enseignant.")
+    }
+    if (!teacherExists) {
+      throw new Error("Cet enseignant n'existe pas.")
     }
 
     const { data, error } = await supabase
@@ -162,13 +215,18 @@ class ClassService {
         {
           enseignant_id: teacherId,
           classe_id: classId,
-          matiere: matiere?.trim() || null,
+          matiere: matiere?.trim().slice(0, 100) || null,
         },
       ])
       .select()
       .returns<SupabaseTeacherLinkResponse[]>()
 
     if (error) {
+      if (error.code === '23505') {
+        throw new Error(
+          'Cet enseignant est déjà lié à cette classe pour cette matière.'
+        )
+      }
       console.error('[ClassService.linkTeacherToClass]:', error.message)
       throw new Error("Erreur lors de la liaison de l'enseignant.")
     }

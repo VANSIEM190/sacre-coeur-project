@@ -8,34 +8,32 @@ import { classService } from '@/services/classe/classe.service'
 import { useFetchData, useMutateData } from '@/hooks/useQuery'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import { teacherService } from '@/services/teacher/teacher.service'
 
 function AdminTeachers() {
   const queryClient = useQueryClient()
   const users = useAuthStore(s => s.registeredUsers)
   const createTeacher = useAuthStore(s => s.createTeacher)
-  const remove = useAuthStore(s => s.removeUser)
 
-  // Filtrage des enseignants depuis le store global
   const teachers = users.filter((u): u is TeacherUser => u.role === 'teacher')
 
-  // États locaux du formulaire de création
+  // Formulaire de création
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [selectedClasses, setSelectedClasses] = useState<string[]>([])
 
-  // ÉTATS POUR LE POPUP (MODAL) DE MODIFICATION
+  // Modal de modification
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingTeacher, setEditingTeacher] = useState<TeacherUser | null>(null)
   const [modalSelectedClasses, setModalSelectedClasses] = useState<string[]>([])
 
-  // 1. REQUÊTE : Récupération des classes dynamiques depuis Supabase
   const {
     data: classesData = [],
     isLoading: isLoadingClasses,
     isError: isClassesError,
   } = useFetchData(['classes'], classService.getAllClasses)
 
-  // 2. MUTATION : Création d'un enseignant
+  // MUTATION : Création d'un enseignant
   const createTeacherMutation = useMutateData(
     (newTeacher: {
       fullName: string
@@ -54,7 +52,41 @@ function AdminTeachers() {
     }
   )
 
-  // Gestion du toggle des badges (Création)
+  const updateUserInStore = useAuthStore(s => s.updateUserInStore)
+  const removeUser = useAuthStore(s => s.removeUser)
+
+  const updateTeacherMutation = useMutateData(
+    ({
+      id,
+      payload,
+    }: {
+      id: string
+      payload: Partial<
+        Pick<TeacherUser, 'fullName' | 'email' | 'assignedclasses'>
+      >
+    }) => teacherService.updateTeacher(id, payload),
+    {
+      onSuccess: (_, variables) => {
+        updateUserInStore(variables.id, variables.payload)
+        toast.success('Enseignant mis à jour avec succès')
+        setIsModalOpen(false)
+        setEditingTeacher(null)
+      },
+      onError: err => SupabaseErrorHandler.handle(err),
+    }
+  )
+
+  const deleteTeacherMutation = useMutateData(
+    (id: string) => teacherService.deleteTeacher(id),
+    {
+      onSuccess: (_data, id) => {
+        removeUser(id)
+        toast.success('Enseignant supprimé avec succès')
+      },
+      onError: err => SupabaseErrorHandler.handle(err),
+    }
+  )
+
   const toggleClass = (classId: string) => {
     setSelectedClasses(prev =>
       prev.includes(classId)
@@ -63,7 +95,7 @@ function AdminTeachers() {
     )
   }
 
-  // Gestion du toggle des badges (Dans le Popup d'Édition)
+  // Toggle local uniquement — n'envoie plus rien à Supabase
   const toggleModalClass = (classId: string) => {
     setModalSelectedClasses(prev =>
       prev.includes(classId)
@@ -89,12 +121,26 @@ function AdminTeachers() {
     toast.success("ID d'accès copié")
   }
 
-  // Ouvre le popup et pré-remplit directement avec le tableau d'IDs existant
   const handleManageClasses = (teacher: TeacherUser) => {
     setEditingTeacher(teacher)
-    // Comme ton service renvoie déjà le tableau d'IDs dansassignedClassNames, on l'injecte directement
     setModalSelectedClasses(teacher.assignedclasses || [])
     setIsModalOpen(true)
+  }
+
+  // Déclenché uniquement au clic sur "Enregistrer"
+  const handleSaveClasses = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editingTeacher) return
+
+    updateTeacherMutation.mutate({
+      id: editingTeacher.id,
+      payload: { assignedclasses: modalSelectedClasses },
+    })
+  }
+
+  const handleDeleteTeacher = (teacher: TeacherUser) => {
+    if (!confirm(`Supprimer le compte de ${teacher.fullName} ?`)) return
+    deleteTeacherMutation.mutate(teacher.id)
   }
 
   return (
@@ -129,7 +175,6 @@ function AdminTeachers() {
           />
         </div>
 
-        {/* Section Sélection des Classes Dynamiques */}
         <div>
           <p className="text-xs uppercase tracking-widest opacity-70 mb-2">
             Classes attribuées
@@ -194,8 +239,6 @@ function AdminTeachers() {
       {/* Liste des enseignants */}
       <div className="space-y-3">
         {teachers.map(t => {
-          console.log(t)
-          // LOGIQUE CORRIGÉE : Filtrer les classes globales dont l'ID est inclus dans les classes du prof
           const teacherClasses = classesData.filter(cls =>
             t.assignedclasses?.includes(cls.id)
           )
@@ -220,13 +263,15 @@ function AdminTeachers() {
                   </button>
                   <button
                     type="button"
-                    onClick={() =>
-                      confirm(`Supprimer le compte de ${t.fullName} ?`) &&
-                      remove(t.id)
-                    }
-                    className="size-9 rounded-full border border-border grid place-items-center hover:bg-destructive hover:text-destructive-foreground transition-all"
+                    onClick={() => handleDeleteTeacher(t)}
+                    disabled={deleteTeacherMutation.isPending}
+                    className="size-9 rounded-full border border-border grid place-items-center hover:bg-destructive hover:text-destructive-foreground transition-all disabled:opacity-50"
                   >
-                    <Trash2 className="size-4" />
+                    {deleteTeacherMutation.isPending ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="size-4" />
+                    )}
                   </button>
                 </div>
               </div>
@@ -265,7 +310,7 @@ function AdminTeachers() {
         )}
       </div>
 
-      {/* POPUP (MODAL) : MODIFICATION DES CLASSES D'UN PROF */}
+      {/* MODAL : MODIFICATION DES CLASSES D'UN PROF */}
       {isModalOpen && editingTeacher && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-fade-in">
           <div className="w-full max-w-md p-6 rounded-3xl bg-card border border-border shadow-2xl space-y-4 animate-scale-in">
@@ -285,7 +330,7 @@ function AdminTeachers() {
               </button>
             </div>
 
-            <form className="space-y-4" onSubmit={e => e.preventDefault()}>
+            <form className="space-y-4" onSubmit={handleSaveClasses}>
               <div>
                 <p className="text-xs uppercase tracking-widest opacity-70 mb-3">
                   Sélectionnez les nouvelles classes
@@ -321,9 +366,14 @@ function AdminTeachers() {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-full bg-sacred-red text-white text-xs font-semibold flex items-center gap-1.5 hover:opacity-90 transition-opacity"
+                  disabled={updateTeacherMutation.isPending}
+                  className="px-4 py-2 rounded-full bg-sacred-red text-white text-xs font-semibold flex items-center gap-1.5 hover:opacity-90 transition-opacity disabled:opacity-50"
                 >
-                  <span>Enregistrer</span>
+                  {updateTeacherMutation.isPending ? (
+                    <Loader2 className="size-3 animate-spin" />
+                  ) : (
+                    <span>Enregistrer</span>
+                  )}
                 </button>
               </div>
             </form>

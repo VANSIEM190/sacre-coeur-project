@@ -111,6 +111,84 @@ class TeacherService {
       throw error
     }
   }
+
+  async updateTeacher(
+    id: string,
+    updates: Partial<RegisterTeacherInput>
+  ): Promise<TeacherUser> {
+    if (!id) {
+      throw new Error(
+        "Impossible de mettre à jour : id de l'enseignant manquant."
+      )
+    }
+
+    const payload: Partial<
+      Pick<TeacherUser, 'fullName' | 'email' | 'assignedclasses'>
+    > = {}
+
+    if (updates.fullName !== undefined) payload.fullName = updates.fullName
+    if (updates.email !== undefined) payload.email = updates.email
+    if (updates.assignedclasses !== undefined)
+      payload.assignedclasses = updates.assignedclasses
+
+    if (Object.keys(payload).length === 0) {
+      throw new Error('Aucune modification à appliquer.')
+    }
+
+    try {
+      const { data: teacherData, error } = await supabase
+        .from('enseignants_details')
+        .update(payload)
+        .eq('id', id)
+        .select()
+        .single()
+
+      if (error) throw error
+      if (!teacherData) throw new Error('Enseignant introuvable.')
+
+      return {
+        id: teacherData.id,
+        email: teacherData.email,
+        role: 'teacher',
+        fullName: teacherData.fullName,
+        teacherAccessId: teacherData.teacherAccessId,
+        assignedclasses: teacherData.assignedclasses || [],
+        createdAt: teacherData.created_at,
+      }
+    } catch (error) {
+      SupabaseErrorHandler.handle(error)
+      throw error
+    }
+  }
+
+  async deleteTeacher(id: string): Promise<void> {
+    if (!id) {
+      throw new Error("Impossible de supprimer : id de l'enseignant manquant.")
+    }
+    try {
+      const { data: teacher, error: fetchError } = await supabase
+        .from('enseignants_details')
+        .select('id, user_id')
+        .eq('id', id)
+        .maybeSingle()
+
+      if (fetchError) throw fetchError
+      if (!teacher) throw new Error('Enseignant introuvable.')
+
+      if (teacher.user_id) {
+        await authService.deleteAccount(teacher.user_id)
+      }
+
+      const { error: deleteError } = await supabase
+        .from('enseignants_details')
+        .delete()
+        .eq('id', id)
+      if (deleteError) throw deleteError
+    } catch (error) {
+      SupabaseErrorHandler.handle(error)
+      throw error
+    }
+  }
 }
 
 export const teacherService = new TeacherService()

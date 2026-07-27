@@ -32,6 +32,7 @@ interface AuthState {
     data: Omit<TeacherUser, 'id' | 'role' | 'createdAt' | 'teacherAccessId'>
   ) => Promise<{ ok: boolean; error?: string }>
 
+  updateUserInStore: (id: string, updates: Partial<AnyUser>) => void
   removeUser: (id: string) => void
   logout: () => Promise<void>
   setTheme: (theme: 'light' | 'dark') => void
@@ -181,6 +182,14 @@ export const useAuthStore = create<AuthState>()(
                 : "Erreur lors de la création de l'enseignant.",
           }
         }
+      },
+
+      updateUserInStore: (id, updates) => {
+        set({
+          registeredUsers: get().registeredUsers.map(user =>
+            user.id === id ? { ...user, ...updates } : user
+          ),
+        })
       },
 
       removeUser: id => {

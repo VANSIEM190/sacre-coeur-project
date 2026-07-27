@@ -6,8 +6,6 @@ import { PublicFooter } from '@/components/public-footer'
 // Assets
 import sceanceGym from '@/assets/sceancegym.jpeg'
 import igfImage from '@/assets/igfImg.jpg'
-import studentsGroup from '@/assets/vrais-eleves.jpg'
-import schoolOffice from '@/assets/vrai-bureau.jpg'
 
 // Types
 export type Category =
@@ -104,14 +102,14 @@ const GALLERY_ITEMS: GalleryItem[] = [
   },
   {
     id: 8,
-    src: '/photoIGF.jpeg',
+    src: '/diplomeResultat.jpeg',
     title: "Sortie pédagogique à l'IGF",
     text: "Nos élèves en pleine immersion à l'Inspection Générale des Finances pour lier la théorie de la classe à la réalité des institutions.",
     category: 'sortie',
   },
   {
     id: 8,
-    src: '/photoIGF.jpeg',
+    src: '/diplomeResultat1.jpeg',
     title: "Sortie pédagogique à l'IGF",
     text: "Nos élèves en pleine immersion à l'Inspection Générale des Finances pour lier la théorie de la classe à la réalité des institutions.",
     category: 'sortie',
@@ -227,7 +225,7 @@ export default function EcolePage() {
               <img
                 src="/batiment-ecole.jpeg"
                 alt="Bâtiment Sacré Cœur de Jésus"
-                className="w-full h-[380px] sm:h-[450px] object-cover transition-transform duration-500 group-hover:scale-105"
+                className="w-full h-95 sm:h-112.5 object-cover transition-transform duration-500 group-hover:scale-105"
               />
 
               {/* Badge discret en haut à droite */}
@@ -236,7 +234,7 @@ export default function EcolePage() {
               </div>
 
               {/* Overlay sombre au survol pour améliorer la lisibilité du texte */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div className="absolute inset-0 bg-linear-to-t from-black/90 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
               {/* Bloc de texte + bouton qui apparaît au survol */}
               <div className="absolute bottom-0 left-0 right-0 p-6 flex flex-col sm:flex-row sm:items-end justify-between gap-4 text-white opacity-0 translate-y-3 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 z-10">
@@ -312,7 +310,7 @@ export default function EcolePage() {
                     onClick={() => setSelectedItem(item)}
                     className="group relative cursor-pointer overflow-hidden rounded-2xl bg-muted/30 border border-border/40 shadow-sm hover:shadow-xl transition-all duration-300"
                   >
-                    <div className="aspect-[4/3] w-full overflow-hidden bg-black/5 relative">
+                    <div className="aspect-4/3 w-full overflow-hidden bg-black/5 relative">
                       <img
                         src={item.src}
                         alt={item.title}
@@ -327,7 +325,7 @@ export default function EcolePage() {
                         </span>
                       )}
 
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4 text-white">
+                      <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4 text-white">
                         <h3 className="font-medium text-sm line-clamp-1">
                           {item.title}
                         </h3>
@@ -443,7 +441,7 @@ export default function EcolePage() {
               onClick={e => e.stopPropagation()}
               className="bg-background max-w-4xl w-full rounded-3xl overflow-hidden shadow-2xl border border-border flex flex-col md:flex-row max-h-[90vh]"
             >
-              <div className="md:w-2/3 bg-black flex items-center justify-center relative min-h-[300px]">
+              <div className="md:w-2/3 bg-black flex items-center justify-center relative min-h-75">
                 {selectedItem.videoSrc ? (
                   <video
                     controls
