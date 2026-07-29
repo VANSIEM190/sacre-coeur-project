@@ -25,7 +25,9 @@ import {
   X,
   Loader2,
   Lock,
+  FileDown,
 } from 'lucide-react'
+import { generateStudentReportPdf } from '@/lib/generateStudentReportPdf'
 
 interface StudentProfileProps {
   student: EleveDetails
@@ -240,6 +242,16 @@ export default function StudentProfile({ student }: StudentProfileProps) {
     }
   }
 
+  const handleDownloadReport = () => {
+    generateStudentReportPdf({
+      student,
+      schoolYear: currentSchoolYear,
+      totals,
+      tranches: financialStatus.tranches,
+      receipts: studentReceipts,
+    })
+  }
+
   // --- SOUMISSION DU FORMULAIRE DE RÉINSCRIPTION ---
   const handleReenrollSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -330,13 +342,23 @@ export default function StudentProfile({ student }: StudentProfileProps) {
             </div>
           </div>
 
-          <button
-            onClick={handleOpenReenrollmentModal}
-            className="flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-sacred-red text-white font-semibold shadow-md hover:bg-sacred-red/90 transition-all active:scale-[0.98] shrink-0"
-          >
-            <UserPlus className="size-5" />
-            Réinscription
-          </button>
+          <div className="flex gap-3">
+            <button
+              onClick={handleDownloadReport}
+              className="flex items-center justify-center gap-2 px-5 py-3 rounded-2xl border border-border font-semibold hover:bg-muted transition-all active:scale-[0.98] shrink-0"
+            >
+              <FileDown className="size-5" />
+              Rapport PDF
+            </button>
+
+            <button
+              onClick={handleOpenReenrollmentModal}
+              className="flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-sacred-red text-white font-semibold shadow-md hover:bg-sacred-red/90 transition-all active:scale-[0.98] shrink-0"
+            >
+              <UserPlus className="size-5" />
+              Réinscription
+            </button>
+          </div>
         </div>
       </div>
 

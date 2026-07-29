@@ -146,6 +146,69 @@ class ClassService {
   }
 
   /**
+   * Sécurité : la validation de format ici est défensive (échoue tôt,
+   * message clair) — l'autorisation réelle (admin uniquement) reste
+   * imposée par la policy RLS UPDATE sur `classes`.
+   * Seuls les champs fournis sont mis à jour (update partiel).
+   */
+  async updateClass(
+    classId: string,
+    values: { nom_classe?: string; annee_scolaire?: string }
+  ): Promise<Omit<ClassName, 'studentCount'>> {
+    if (!classId || !this.isValidUuid(classId)) {
+      throw new Error("L'identifiant de la classe est requis et invalide.")
+    }
+
+    const updateData: { nom_classe?: string; annee_scolaire?: string } = {}
+
+    if (values.nom_classe !== undefined) {
+      const nomNettoye = values.nom_classe.trim()
+      if (!nomNettoye) {
+        throw new Error('Le nom de la classe ne peut pas être vide.')
+      }
+      if (nomNettoye.length > 100) {
+        throw new Error('Nom de classe trop long.')
+      }
+      updateData.nom_classe = nomNettoye
+    }
+
+    if (values.annee_scolaire !== undefined) {
+      const anneeNettoyee = values.annee_scolaire.trim()
+      if (!anneeNettoyee) {
+        throw new Error("L'année scolaire ne peut pas être vide.")
+      }
+      if (anneeNettoyee.length > 20) {
+        throw new Error('Année scolaire trop longue.')
+      }
+      updateData.annee_scolaire = anneeNettoyee
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      throw new Error('Aucune donnée à mettre à jour.')
+    }
+
+    const { data, error } = await supabase
+      .from('classes')
+      .update(updateData)
+      .eq('id', classId)
+      .select('id, nom_classe, annee_scolaire')
+      .single()
+
+    if (error) {
+      if (error.code === '23505') {
+        throw new Error(
+          `Une classe "${updateData.nom_classe ?? ''}" existe déjà pour cette année scolaire.`
+        )
+      }
+      console.error('[ClassService.updateClass]:', error.message)
+      throw new Error('Erreur lors de la mise à jour de la classe.')
+    }
+
+    if (!data) throw new Error('Classe introuvable ou aucune donnée renvoyée.')
+    return data
+  }
+
+  /**
    * Sécurité CRITIQUE : opération admin uniquement — imposée par la RLS
    * DELETE sur `classes`. Garde la contrainte ON DELETE RESTRICT sur
    * `inscriptions.classe_id` pour ne jamais perdre l'historique des élèves.

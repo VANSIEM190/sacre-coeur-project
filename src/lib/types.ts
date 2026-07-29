@@ -226,3 +226,9 @@ export interface ClassFeeConfig {
   schoolYear: string
   paidAt: string
 }
+
+export interface DownloadFileOptions {
+  bucket: string
+  filePath: string
+  fileName?: string
+}

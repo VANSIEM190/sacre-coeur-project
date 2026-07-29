@@ -2,38 +2,57 @@ import type { Course } from '@/lib/types'
 import { supabase } from '@/supabase/supabaseClient'
 import { nanoid } from 'nanoid'
 
-const ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'pdf', 'docx']
+const ALLOWED_MIME_TYPES: Record<string, string[]> = {
+  'image/jpeg': ['jpg', 'jpeg'],
+  'image/png': ['png'],
+  'application/pdf': ['pdf'],
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': [
+    'docx',
+  ],
+}
+const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10 Mo
 const BUCKET_NAME = 'sacre-coeur-files-courses'
 
 class AdminCoursesServices {
-  async getCourses(): Promise<Course[]> {
-    const threeWeeksAgo = new Date()
-    threeWeeksAgo.setDate(threeWeeksAgo.getDate() - 21)
-    const filterDateStr = threeWeeksAgo.toISOString()
+  private validateFile(file: File): string {
+    const ext = file.name.split('.').pop()?.toLowerCase()
+    const allowedExts = ALLOWED_MIME_TYPES[file.type]
 
+    if (!ext || !allowedExts || !allowedExts.includes(ext)) {
+      throw new Error('Format de fichier non autorisé.')
+    }
+
+    if (file.size > MAX_FILE_SIZE) {
+      throw new Error('Fichier trop volumineux (10 Mo max).')
+    }
+
+    return ext
+  }
+
+  async getCourses(): Promise<Course[]> {
     const { data, error } = await supabase
       .from('courses')
       .select('*')
-      .gte('uploadedAt', filterDateStr)
       .order('uploadedAt', { ascending: false })
 
-    if (error) throw error
+    if (error) {
+      console.error('[AdminCoursesServices.getCourses]', error)
+      throw new Error('Impossible de récupérer les cours.')
+    }
     return data || []
   }
 
   async createCourse(
-    values: Omit<Course, 'id' | 'pdfUrl' | 'uploadedAt'> & { pdfUrl: File }
+    values: Partial<Omit<Course, 'id' | 'uploadedAt' | 'pdfUrl'>> & {
+      pdfUrl?: File
+    }
   ): Promise<string> {
     if (!values || !values.pdfUrl) {
       throw new Error('Les données du cours et le fichier sont obligatoires.')
     }
 
-    const fileNameExt = values.pdfUrl.name.split('.').pop()?.toLowerCase()
-    if (!fileNameExt || !ALLOWED_EXTENSIONS.includes(fileNameExt)) {
-      throw new Error('Format de fichier non autorisé.')
-    }
-
-    const filePath = `courses/${nanoid()}.${fileNameExt}`
+    const ext = this.validateFile(values.pdfUrl)
+    const filePath = `courses/${nanoid()}.${ext}`
 
     const { data: storageData, error: fileError } = await supabase.storage
       .from(BUCKET_NAME)
@@ -42,7 +61,10 @@ class AdminCoursesServices {
         upsert: false,
       })
 
-    if (fileError) throw fileError
+    if (fileError) {
+      console.error('[AdminCoursesServices.createCourse] upload', fileError)
+      throw new Error("Impossible d'envoyer le fichier du cours.")
+    }
 
     try {
       const { data: dbData, error: dbError } = await supabase
@@ -59,14 +81,26 @@ class AdminCoursesServices {
       if (dbError) throw dbError
       return dbData.id
     } catch (error) {
-      await supabase.storage.from(BUCKET_NAME).remove([filePath])
-      throw error
+      const { error: rollbackError } = await supabase.storage
+        .from(BUCKET_NAME)
+        .remove([filePath])
+      if (rollbackError) {
+        console.error(
+          '[AdminCoursesServices.createCourse] rollback échoué, fichier orphelin:',
+          filePath,
+          rollbackError
+        )
+      }
+      console.error('[AdminCoursesServices.createCourse] insert', error)
+      throw new Error('Impossible de créer le cours.', { cause: error })
     }
   }
 
   async updateCourse(
     id: string,
-    values: Partial<Omit<Course, 'id' | 'uploadedAt'>> & { pdfUrl?: File }
+    values: Partial<Omit<Course, 'id' | 'uploadedAt' | 'pdfUrl'>> & {
+      pdfUrl?: File
+    }
   ): Promise<void> {
     if (!id) throw new Error("L'identifiant du cours est requis.")
 
@@ -76,7 +110,10 @@ class AdminCoursesServices {
       .eq('id', id)
       .single()
 
-    if (fetchError) throw fetchError
+    if (fetchError) {
+      console.error('[AdminCoursesServices.updateCourse] fetch', fetchError)
+      throw new Error(`Cours introuvable (id: ${id}).`)
+    }
 
     const updateData: Omit<Partial<Course>, 'pdfUrl'> & { pdfUrl?: string } = {
       title: values.title,
@@ -87,18 +124,8 @@ class AdminCoursesServices {
     let newFilePath: string | null = null
 
     if (values.pdfUrl) {
-      const fileNameExtUpdate = values.pdfUrl.name
-        .split('.')
-        .pop()
-        ?.toLowerCase()
-      if (
-        !fileNameExtUpdate ||
-        !ALLOWED_EXTENSIONS.includes(fileNameExtUpdate)
-      ) {
-        throw new Error('Format de fichier non autorisé.')
-      }
-
-      newFilePath = `courses/${nanoid()}.${fileNameExtUpdate}`
+      const ext = this.validateFile(values.pdfUrl)
+      newFilePath = `courses/${nanoid()}.${ext}`
 
       const { error: uploadError } = await supabase.storage
         .from(BUCKET_NAME)
@@ -107,7 +134,10 @@ class AdminCoursesServices {
           upsert: false,
         })
 
-      if (uploadError) throw uploadError
+      if (uploadError) {
+        console.error('[AdminCoursesServices.updateCourse] upload', uploadError)
+        throw new Error("Impossible d'envoyer le nouveau fichier du cours.")
+      }
       updateData.pdfUrl = newFilePath
     }
 
@@ -118,13 +148,32 @@ class AdminCoursesServices {
 
     if (updateError) {
       if (newFilePath) {
-        await supabase.storage.from(BUCKET_NAME).remove([newFilePath])
+        const { error: rollbackError } = await supabase.storage
+          .from(BUCKET_NAME)
+          .remove([newFilePath])
+        if (rollbackError) {
+          console.error(
+            '[AdminCoursesServices.updateCourse] rollback échoué, fichier orphelin:',
+            newFilePath,
+            rollbackError
+          )
+        }
       }
-      throw updateError
+      console.error('[AdminCoursesServices.updateCourse] update', updateError)
+      throw new Error('Impossible de mettre à jour le cours.')
     }
 
     if (values.pdfUrl && oldCourse?.pdfUrl) {
-      await supabase.storage.from(BUCKET_NAME).remove([oldCourse.pdfUrl])
+      const { error: cleanupError } = await supabase.storage
+        .from(BUCKET_NAME)
+        .remove([oldCourse.pdfUrl])
+      if (cleanupError) {
+        console.error(
+          '[AdminCoursesServices.updateCourse] ancien fichier non supprimé (orphelin):',
+          oldCourse.pdfUrl,
+          cleanupError
+        )
+      }
     }
   }
 
@@ -138,18 +187,30 @@ class AdminCoursesServices {
       )
     }
 
-    const { error: storageError } = await supabase.storage
-      .from(BUCKET_NAME)
-      .remove([payload.filePath])
-
-    if (storageError) throw storageError
-
+    // On supprime la référence DB en premier : si ça échoue, rien n'est perdu.
     const { error: deleteError } = await supabase
       .from('courses')
       .delete()
       .eq('id', payload.courseId)
 
-    if (deleteError) throw deleteError
+    if (deleteError) {
+      console.error('[AdminCoursesServices.deleteCourse] delete', deleteError)
+      throw new Error('Impossible de supprimer le cours.')
+    }
+
+    // Le fichier storage est supprimé ensuite ; un échec ici ne laisse
+    // qu'un fichier orphelin (sans impact utilisateur), pas une incohérence DB.
+    const { error: storageError } = await supabase.storage
+      .from(BUCKET_NAME)
+      .remove([payload.filePath])
+
+    if (storageError) {
+      console.error(
+        '[AdminCoursesServices.deleteCourse] fichier orphelin à nettoyer manuellement:',
+        payload.filePath,
+        storageError
+      )
+    }
   }
 }
 

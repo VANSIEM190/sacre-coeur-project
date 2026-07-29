@@ -6,6 +6,7 @@ import { useFetchData, useMutateData } from '@/hooks/useQuery'
 import { filterElement } from '@/utils/filterElements'
 import { useQueryClient } from '@tanstack/react-query'
 import type { EleveDetails } from '@/lib/types'
+import { SupabaseErrorHandler } from '@/services/core/Supabase.error.handler'
 
 function AdminValidations() {
   const queryClient = useQueryClient()
@@ -38,7 +39,7 @@ function AdminValidations() {
       status,
     }: {
       inscriptionId: string
-      status: 'valide' | 'rejete'
+      status: 'accepte' | 'rejete'
     }) => studentService.updateStudentStatus({ inscriptionId, status }),
     {
       onSuccess: () => {
@@ -47,7 +48,8 @@ function AdminValidations() {
         queryClient.invalidateQueries({ queryKey: ['all-students'] })
         setActiveInscriptionId(null)
       },
-      onError: () => {
+      onError: err => {
+        SupabaseErrorHandler.handle(err)
         setActiveInscriptionId(null)
       },
     }
@@ -72,7 +74,10 @@ function AdminValidations() {
     ]
   }, [pendingStudents])
 
-  const handleAction = (inscriptionId: string, status: 'valide' | 'rejete') => {
+  const handleAction = (
+    inscriptionId: string,
+    status: 'accepte' | 'rejete'
+  ) => {
     setActiveInscriptionId(inscriptionId)
     updateStatus({ inscriptionId, status })
   }
@@ -179,7 +184,7 @@ function AdminValidations() {
                   <button
                     disabled={isUpdating || !inscriptionId}
                     onClick={() =>
-                      inscriptionId && handleAction(inscriptionId, 'valide')
+                      inscriptionId && handleAction(inscriptionId, 'accepte')
                     }
                     className="px-3.5 sm:px-4 py-2 rounded-xl sm:rounded-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-semibold flex items-center gap-1.5 transition-colors disabled:opacity-50 cursor-pointer"
                   >

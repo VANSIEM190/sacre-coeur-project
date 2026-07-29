@@ -3,11 +3,20 @@ import { useQueryClient } from '@tanstack/react-query'
 import { PageHeader } from '@/components/Dashboard-shell'
 import { useAuthStore } from '@/stores/auth-store'
 import { classService } from '@/services/classe/classe.service'
-import { Trash2, ArrowLeft, Plus, X, Loader2, Search } from 'lucide-react'
+import {
+  Trash2,
+  ArrowLeft,
+  Plus,
+  X,
+  Loader2,
+  Search,
+  Pencil,
+} from 'lucide-react'
 import { SupabaseErrorHandler } from '@/services/core/Supabase.error.handler'
 import { toast } from 'sonner'
 import { useFetchData, useMutateData } from '@/hooks/useQuery'
 import { filterElement } from '@/utils/filterElements'
+import type { ClassName } from '@/lib/types'
 
 function AdminClasses() {
   const queryClient = useQueryClient()
@@ -16,10 +25,11 @@ function AdminClasses() {
   const [selected, setSelected] = useState<string | null>(null)
   const [selectedIdClasse, SetSelectedIdClasse] = useState<string>('')
 
-  // États pour le Modal
+  // États pour le Modal (création ET édition)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [newClassName, setNewClassName] = useState('')
   const [schoolYear, setSchoolYear] = useState('2026-2027')
+  const [editingClass, setEditingClass] = useState<ClassName | null>(null)
 
   // État pour le filtrage des élèves
   const [studentSearchQuery, setStudentSearchQuery] = useState('')
@@ -40,6 +50,13 @@ function AdminClasses() {
     classService.getStudentsInClass(selectedIdClasse)
   )
 
+  const closeModal = () => {
+    setIsModalOpen(false)
+    setEditingClass(null)
+    setNewClassName('')
+    setSchoolYear('2026-2027')
+  }
+
   // 3. MUTATION : Création d'une classe avec TanStack Query
   const createClassMutation = useMutateData(
     ({ name, year }: { name: string; year: string }) =>
@@ -47,11 +64,25 @@ function AdminClasses() {
     {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ['classes'] })
-
         toast.success('classe créee avec succès')
+        closeModal()
+      },
+      onError: err => SupabaseErrorHandler.handle(err),
+    }
+  )
 
-        setNewClassName('')
-        setIsModalOpen(false)
+  // 3bis. MUTATION : Mise à jour d'une classe avec TanStack Query
+  const updateClassMutation = useMutateData(
+    ({ id, name, year }: { id: string; name: string; year: string }) =>
+      classService.updateClass(id, {
+        nom_classe: name,
+        annee_scolaire: year,
+      }),
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['classes'] })
+        toast.success('classe mise à jour avec succès')
+        closeModal()
       },
       onError: err => SupabaseErrorHandler.handle(err),
     }
@@ -69,11 +100,34 @@ function AdminClasses() {
     }
   )
 
-  const handleCreateClass = (e: React.FormEvent) => {
+  const openCreateModal = () => {
+    setEditingClass(null)
+    setNewClassName('')
+    setSchoolYear('2026-2027')
+    setIsModalOpen(true)
+  }
+
+  const openEditModal = (e: React.MouseEvent, classe: ClassName) => {
+    e.stopPropagation()
+    setEditingClass(classe)
+    setNewClassName(classe.nom_classe)
+    setSchoolYear(classe.annee_scolaire)
+    setIsModalOpen(true)
+  }
+
+  const handleSubmitClass = (e: React.FormEvent) => {
     e.preventDefault()
     if (!newClassName.trim()) return
 
-    createClassMutation.mutate({ name: newClassName, year: schoolYear })
+    if (editingClass) {
+      updateClassMutation.mutate({
+        id: editingClass.id,
+        name: newClassName,
+        year: schoolYear,
+      })
+    } else {
+      createClassMutation.mutate({ name: newClassName, year: schoolYear })
+    }
   }
 
   const handleDeleteClass = (
@@ -96,6 +150,9 @@ function AdminClasses() {
       searchQuery: studentSearchQuery,
     })
   }, [list, studentSearchQuery])
+
+  const isSavingClass =
+    createClassMutation.isPending || updateClassMutation.isPending
 
   if (selected) {
     return studentLoading ? (
@@ -182,7 +239,7 @@ function AdminClasses() {
           subtitle="Cliquez sur une classe pour voir les élèves."
         />
         <button
-          onClick={() => setIsModalOpen(true)}
+          onClick={openCreateModal}
           className="h-11 px-5 rounded-xl bg-primary text-primary-foreground font-medium flex items-center justify-center gap-2 hover:opacity-90 transition-opacity self-start sm:self-auto"
         >
           <Plus className="size-5" />
@@ -220,14 +277,26 @@ function AdminClasses() {
                 </p>
               </div>
 
-              {/* Bouton Supprimer la classe */}
-              <button
-                disabled={deleteClassMutation.isPending}
-                onClick={e => handleDeleteClass(e, c.id, c.nom_classe)}
-                className="size-8 rounded-full border border-border grid place-items-center opacity-0 group-hover:opacity-60 hover:opacity-100! hover:bg-destructive hover:text-destructive-foreground transition-all disabled:opacity-40"
-              >
-                <Trash2 className="size-4" />
-              </button>
+              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                {/* Bouton Modifier la classe */}
+                <button
+                  onClick={e => openEditModal(e, c)}
+                  className="size-8 rounded-full border border-border grid place-items-center hover:bg-muted transition-all"
+                  title="Modifier"
+                >
+                  <Pencil className="size-4" />
+                </button>
+
+                {/* Bouton Supprimer la classe */}
+                <button
+                  disabled={deleteClassMutation.isPending}
+                  onClick={e => handleDeleteClass(e, c.id, c.nom_classe)}
+                  className="size-8 rounded-full border border-border grid place-items-center hover:bg-destructive hover:text-destructive-foreground transition-all disabled:opacity-40"
+                  title="Supprimer"
+                >
+                  <Trash2 className="size-4" />
+                </button>
+              </div>
             </div>
           ))}
 
@@ -241,23 +310,27 @@ function AdminClasses() {
         </div>
       )}
 
-      {/* MODAL */}
+      {/* MODAL (création ET édition) */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
           <div className="w-full max-w-md rounded-3xl bg-card border border-border p-6 relative shadow-2xl">
             <button
-              onClick={() => setIsModalOpen(false)}
+              onClick={closeModal}
               className="absolute top-4 right-4 p-2 rounded-full opacity-60 hover:opacity-100 hover:bg-muted transition-colors"
             >
               <X className="size-5" />
             </button>
 
-            <h3 className="font-display text-2xl mb-1">Nouvelle classe</h3>
+            <h3 className="font-display text-2xl mb-1">
+              {editingClass ? 'Modifier la classe' : 'Nouvelle classe'}
+            </h3>
             <p className="text-sm opacity-60 mb-6">
-              Ajoutez une nouvelle classe pour l'année en cours.
+              {editingClass
+                ? `Modifiez les informations de « ${editingClass.nom_classe} ».`
+                : "Ajoutez une nouvelle classe pour l'année en cours."}
             </p>
 
-            <form onSubmit={handleCreateClass} className="space-y-4">
+            <form onSubmit={handleSubmitClass} className="space-y-4">
               <div>
                 <label className="text-xs font-semibold uppercase tracking-wider opacity-60 block mb-2">
                   Nom de la classe
@@ -290,20 +363,18 @@ function AdminClasses() {
               <div className="flex justify-end gap-3 pt-4">
                 <button
                   type="button"
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={closeModal}
                   className="h-11 px-4 rounded-xl border border-border font-medium text-sm hover:bg-muted transition-colors"
                 >
                   Annuler
                 </button>
                 <button
                   type="submit"
-                  disabled={createClassMutation.isPending}
+                  disabled={isSavingClass}
                   className="h-11 px-5 rounded-xl bg-primary text-primary-foreground font-medium text-sm hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center gap-2"
                 >
-                  {createClassMutation.isPending && (
-                    <Loader2 className="size-4 animate-spin" />
-                  )}
-                  Enregistrer la classe
+                  {isSavingClass && <Loader2 className="size-4 animate-spin" />}
+                  {editingClass ? 'Mettre à jour' : 'Enregistrer la classe'}
                 </button>
               </div>
             </form>

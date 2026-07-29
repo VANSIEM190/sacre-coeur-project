@@ -109,7 +109,7 @@ export function PublicFooter() {
           © {new Date().getFullYear()} Sacré Cœur de Jésus
         </p>
         <p className="text-xs opacity-40 italic">
-          fait par Van'siem ancien éléve de l'école
+          fait par Van'siem Fono Gracia ancien éléve de l'école
         </p>
       </div>
     </footer>

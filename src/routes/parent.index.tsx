@@ -18,8 +18,6 @@ function StudentHome() {
   )
 
   const annoncesValides = filterByDate(announcements, 'createdAt')
-  const coursValides = filterByDate(serverCourses, 'uploadedAt')
-  console.log(serverCourses)
 
   const parent = useAuthStore(s => s.currentUser) as RegisterParentUser
 
@@ -41,7 +39,7 @@ function StudentHome() {
         </div>
         <div className="p-6 rounded-3xl bg-card border border-border">
           <BookOpen className="size-6 mb-3 text-sacred-red" />
-          <p className="font-display text-4xl">{coursValides.length}</p>
+          <p className="font-display text-4xl">{serverCourses.length}</p>
           <p className="text-sm opacity-60">Cours disponibles</p>
         </div>
         <div className="p-6 rounded-3xl bg-card border border-border">

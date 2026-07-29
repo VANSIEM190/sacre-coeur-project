@@ -5,21 +5,18 @@ import { classService } from '@/services/classe/classe.service'
 import { adminCoursesServices } from '@/services/course/course.service'
 import { useFetchData } from '@/hooks/useQuery'
 import { filterElement } from '@/utils/filterElements'
+import { downloadFile } from '@/utils/downloadFile'
+import { SupabaseErrorHandler } from '@/services/core/Supabase.error.handler'
 
-const fakeDownload = (filename: string, content: string) => {
-  const blob = new Blob([content], { type: 'application/pdf' })
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = filename
-  link.click()
-  URL.revokeObjectURL(url)
-}
+const BUCKET_NAME = 'sacre-coeur-files-courses'
 
 function ParentCours() {
   // États pour le système de filtrage
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedClassFilter, setSelectedClassFilter] = useState('Tous')
+
+  // Suivi du téléchargement en cours (par id de cours)
+  const [downloadingId, setDownloadingId] = useState<string | null>(null)
 
   const { data: classes = [] } = useFetchData(
     ['studentClasses'],
@@ -37,6 +34,28 @@ function ParentCours() {
     selectKey: 'class_id',
     selectedValue: selectedClassFilter,
   })
+
+  const handleDownload = async (
+    courseId: string,
+    pdfUrl: string,
+    title: string
+  ) => {
+    setDownloadingId(courseId)
+    try {
+      const ext = pdfUrl.split('.').pop()
+      await downloadFile({
+        bucket: BUCKET_NAME,
+        filePath: pdfUrl,
+        fileName: `${title}.${ext}`,
+      })
+    } catch (error) {
+      console.error('Erreur lors du téléchargement :', error)
+      SupabaseErrorHandler.handle(error)
+    } finally {
+      setDownloadingId(null)
+    }
+  }
+
   return (
     <div>
       <PageHeader title="Mes cours" subtitle={'parent'} />
@@ -80,19 +99,20 @@ function ParentCours() {
             >
               <div>
                 <p className="font-semibold">{c.title}</p>
-                <p className="text-xs opacity-60">
+                <div className="text-xs opacity-60">
                   {classes
                     .filter(cls => cls.id === c.class_id)
                     .map(rom => (
-                      <p className="text-xs opacity-60">
-                        {rom.nom_classe} · {c.description}{' '}
-                      </p>
+                      <span key={rom.id}>
+                        {rom.nom_classe} · {c.description}
+                      </span>
                     ))}
-                </p>
+                </div>
               </div>
               <button
-                onClick={() => fakeDownload(c.pdfUrl, c.title)}
-                className="size-9 rounded-full border border-border grid place-items-center hover:bg-muted text-primary transition-colors"
+                onClick={() => handleDownload(c.id, c.pdfUrl, c.title)}
+                disabled={downloadingId === c.id}
+                className="size-9 rounded-full border border-border grid place-items-center hover:bg-muted text-primary transition-colors disabled:opacity-50"
                 title="Télécharger l'archive"
               >
                 <Download className="size-4" />

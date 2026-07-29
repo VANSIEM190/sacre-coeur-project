@@ -1,6 +1,15 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { LogOut, Moon, Sun, Menu, X, type LucideIcon } from 'lucide-react'
+import {
+  LogOut,
+  Moon,
+  Sun,
+  Menu,
+  X,
+  ChevronLeft,
+  ChevronRight,
+  type LucideIcon,
+} from 'lucide-react'
 import { useAuthStore } from '@/stores/auth-store'
 import { useEffect, useState, type ReactNode } from 'react'
 
@@ -17,6 +26,8 @@ interface DashboardShellProps {
   children: ReactNode
 }
 
+const SIDEBAR_COLLAPSED_KEY = 'sidebar-collapsed'
+
 export function DashboardShell({
   navItems,
   roleLabel,
@@ -32,6 +43,28 @@ export function DashboardShell({
 
   // État pour gérer l'ouverture de la sidebar sur mobile
   const [isOpen, setIsOpen] = useState(false)
+
+  // État pour gérer la réduction de la sidebar sur desktop (persisté)
+  const [isCollapsed, setIsCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === 'true'
+    } catch {
+      return false
+    }
+  })
+
+  const toggleCollapsed = () => {
+    setIsCollapsed(prev => {
+      const next = !prev
+      try {
+        localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(next))
+      } catch {
+        // localStorage indisponible (navigation privée, quota) : on
+        // continue sans persister, ce n'est pas bloquant.
+      }
+      return next
+    })
+  }
 
   useEffect(() => {
     if (!currentUser || currentUser.role !== requiredRole) {
@@ -82,23 +115,43 @@ export function DashboardShell({
 
       {/* --- SIDEBAR RESPONSIVE & FIXED --- */}
       <aside
-        className={`fixed h-screen top-0 bottom-0 left-0 w-72 flex flex-col border-r border-border bg-card z-50 transform transition-transform duration-300 
+        className={`fixed h-screen top-0 bottom-0 left-0 flex flex-col border-r border-border bg-card z-50 transition-[width,transform] duration-300 ease-in-out
           lg:translate-x-0 lg:sticky
           ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+          ${isCollapsed ? 'lg:w-20' : 'lg:w-72'} w-72
         `}
       >
-        <div className="p-6 border-b border-border flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-3">
-            <div className="size-9 bg-sacred-red rounded-full grid place-items-center shadow-lg shadow-sacred-red/20">
+        <div
+          className={`p-6 border-b border-border flex items-center ${isCollapsed ? 'lg:justify-center lg:px-3' : 'justify-between'}`}
+        >
+          <Link
+            to="/"
+            className={`flex items-center gap-3 ${isCollapsed ? 'lg:gap-0' : ''}`}
+          >
+            <div className="size-9 bg-sacred-red rounded-full grid place-items-center shadow-lg shadow-sacred-red/20 shrink-0">
               <div className="size-3.5 rounded-full border-2 border-sacred-gold" />
             </div>
-            <div>
+            <div className={isCollapsed ? 'lg:hidden' : ''}>
               <p className="font-display text-lg leading-tight">Sacré Cœur</p>
               <p className="text-[10px] uppercase tracking-widest opacity-50">
                 {roleLabel}
               </p>
             </div>
           </Link>
+
+          {/* Bouton réduire/agrandir — visible uniquement sur desktop */}
+          <button
+            onClick={toggleCollapsed}
+            className="hidden lg:flex items-center justify-center py-2 ml-2 mb-1 rounded-xl border border-border hover:bg-muted transition-colors text-foreground/60"
+            aria-label={isCollapsed ? 'Agrandir le menu' : 'Réduire le menu'}
+            title={isCollapsed ? 'Agrandir le menu' : 'Réduire le menu'}
+          >
+            {isCollapsed ? (
+              <ChevronRight className="size-4" />
+            ) : (
+              <ChevronLeft className="size-4" />
+            )}
+          </button>
 
           {/* Bouton fermeture interne pour mobile */}
           <button
@@ -109,7 +162,7 @@ export function DashboardShell({
           </button>
         </div>
 
-        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+        <nav className="flex-1 p-4 space-y-1 overflow-y-auto overflow-x-hidden">
           {navItems.map(item => {
             const active =
               pathname === item.to ||
@@ -119,21 +172,28 @@ export function DashboardShell({
                 key={item.to}
                 to={item.to}
                 onClick={() => setIsOpen(false)}
+                title={isCollapsed ? item.label : undefined}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                  isCollapsed ? 'lg:justify-center lg:px-0' : ''
+                } ${
                   active
                     ? 'bg-sacred-red text-white shadow-md shadow-sacred-red/20'
                     : 'opacity-70 hover:opacity-100 hover:bg-muted'
                 }`}
               >
                 <item.icon className="size-4 shrink-0" />
-                {item.label}
+                <span className={isCollapsed ? 'lg:hidden' : ''}>
+                  {item.label}
+                </span>
               </Link>
             )
           })}
         </nav>
 
         <div className="p-4 border-t border-border space-y-2">
-          <div className="px-3 py-2 rounded-xl bg-muted">
+          <div
+            className={`px-3 py-2 rounded-xl bg-muted ${isCollapsed ? 'lg:hidden' : ''}`}
+          >
             <p className="text-xs font-semibold truncate">
               {currentUser.fullName}
             </p>
@@ -141,7 +201,7 @@ export function DashboardShell({
               {currentUser.email}
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className={`flex gap-2 ${isCollapsed ? 'lg:flex-col' : ''}`}>
             <button
               onClick={toggleTheme}
               className="flex-1 py-2 rounded-xl border border-border hover:bg-muted transition-colors grid place-items-center"
@@ -164,13 +224,13 @@ export function DashboardShell({
         </div>
       </aside>
 
-      {/* --- CONTENT AREA AREA (Ajustement du padding top pour mobile) --- */}
+      {/* --- CONTENT AREA (Ajustement du padding top pour mobile) --- */}
       <main className="flex-1 min-w-0 pt-16 lg:pt-0">
         <motion.div
           key={pathname}
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
+          transition={{ duration: 0.1 }}
           className="p-6 lg:p-10 max-w-7xl mx-auto"
         >
           {children}
