@@ -83,9 +83,10 @@ function LoginPage() {
         <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_30%_20%,white,transparent_60%)]" />
         <div className="relative h-full flex flex-col justify-between p-12 text-white">
           <Link to="/" className="flex items-center gap-3">
-            <div className="size-10 bg-white rounded-full grid place-items-center">
-              <div className="size-4 rounded-full border-2 border-sacred-red" />
-            </div>
+            <img
+              src="/imgAcc.jpg"
+              className="size-10 rounded-full border-2 border-sacred-gold"
+            />
             <span className="font-display text-2xl">Sacré Cœur</span>
           </Link>
           <div>

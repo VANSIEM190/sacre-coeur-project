@@ -26,6 +26,7 @@ import {
   Loader2,
   Lock,
   FileDown,
+  Ticket,
 } from 'lucide-react'
 import { generateStudentReportPdf } from '@/lib/generateStudentReportPdf'
 
@@ -44,6 +45,10 @@ interface TrancheData {
   requiredFC: number
   status: TrancheStatus
 }
+
+// Chemin du billet de vacances, fichier statique déjà présent dans
+// le dossier `public/` du projet. ⚠️ Adapte le nom si besoin.
+const BILLET_VACANCE_PATH = '/billet-vacance.pdf'
 
 const getStudentFullName = (s: Partial<EleveDetails>): string => {
   return [s.firstName, s.middleName, s.lastName].filter(Boolean).join(' ')
@@ -252,6 +257,25 @@ export default function StudentProfile({ student }: StudentProfileProps) {
     })
   }
 
+  // --- TÉLÉCHARGEMENT DU BILLET DE VACANCES (PDF statique, dossier public/) ---
+  const handleDownloadBilletVacance = () => {
+    const safeName = getStudentFullName(student)
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '')
+
+    const link = document.createElement('a')
+    link.href = BILLET_VACANCE_PATH
+    link.setAttribute(
+      'download',
+      `Billet_de_vacances_${safeName || 'eleve'}.pdf`
+    )
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
   // --- SOUMISSION DU FORMULAIRE DE RÉINSCRIPTION ---
   const handleReenrollSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -268,21 +292,21 @@ export default function StudentProfile({ student }: StudentProfileProps) {
     const state = financialStatus.tranches[trancheNum].status
     if (state === 'Réglée') {
       return (
-        <div className="flex items-center gap-1.5 text-xs text-emerald-600 bg-emerald-500/10 px-2.5 py-1 rounded-full font-medium">
-          <CheckCircle2 className="size-3.5" /> Réglée
+        <div className="flex items-center gap-1.5 text-xs text-emerald-600 bg-emerald-500/10 px-2.5 py-1 rounded-full font-medium whitespace-nowrap">
+          <CheckCircle2 className="size-3.5 shrink-0" /> Réglée
         </div>
       )
     }
     if (state === 'Incomplète') {
       return (
-        <div className="flex items-center gap-1.5 text-xs text-amber-600 bg-amber-500/10 px-2.5 py-1 rounded-full font-medium">
-          <AlertTriangle className="size-3.5" /> Incomplète
+        <div className="flex items-center gap-1.5 text-xs text-amber-600 bg-amber-500/10 px-2.5 py-1 rounded-full font-medium whitespace-nowrap">
+          <AlertTriangle className="size-3.5 shrink-0" /> Incomplète
         </div>
       )
     }
     return (
-      <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/40 px-2.5 py-1 rounded-full font-medium">
-        <Clock className="size-3.5" /> Non entamée
+      <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/40 px-2.5 py-1 rounded-full font-medium whitespace-nowrap">
+        <Clock className="size-3.5 shrink-0" /> Non entamée
       </div>
     )
   }
@@ -296,66 +320,78 @@ export default function StudentProfile({ student }: StudentProfileProps) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6 w-full max-w-full overflow-x-hidden px-3 sm:px-0">
       <PageHeader
         title="Profil Financier & Scolaire"
         subtitle="Suivi individuel de la scolarité et contrôle d'accès aux résultats."
       />
 
       {/* 1. CARTE PROFIL ÉLÈVE AVEC BOUTON RÉINSCRIPTION */}
-      <div className="p-6 rounded-3xl bg-card border border-border flex flex-col md:flex-row justify-between gap-6 items-start md:items-center">
-        <div className="flex items-center gap-4">
-          <div className="size-16 rounded-2xl bg-sacred-red/10 text-sacred-red grid place-items-center shrink-0">
-            <User className="size-8" />
+      <div className="p-4 sm:p-6 rounded-2xl sm:rounded-3xl bg-card border border-border flex flex-col lg:flex-row justify-between gap-5 sm:gap-6 items-start lg:items-center">
+        <div className="flex items-center gap-3 sm:gap-4 w-full lg:w-auto min-w-0">
+          <div className="size-12 sm:size-16 rounded-2xl bg-sacred-red/10 text-sacred-red grid place-items-center shrink-0">
+            <User className="size-6 sm:size-8" />
           </div>
-          <div>
-            <h2 className="text-xl font-bold tracking-tight">
+          <div className="min-w-0">
+            <h2 className="text-sm sm:text-xl font-bold tracking-tight truncate">
               {getStudentFullName(student)}
             </h2>
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-sm opacity-70">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs sm:text-sm opacity-70">
               <span className="flex items-center gap-1">
-                <GraduationCap className="size-4" />
+                <GraduationCap className="size-4 shrink-0" />
                 {student.currentClassName || 'Classe non assignée'}
               </span>
               <span className="size-1 bg-border rounded-full hidden sm:inline" />
               <span className="flex items-center gap-1">
-                <Calendar className="size-4" />
+                <Calendar className="size-4 shrink-0" />
                 Année : {currentSchoolYear}
               </span>
             </div>
           </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto items-stretch sm:items-center">
-          <div className="flex gap-4">
-            <div className="flex-1 md:flex-initial p-4 rounded-2xl bg-background border border-border/60 text-center md:text-left min-w-30">
-              <p className="text-xs opacity-50 font-medium">Total payé (USD)</p>
-              <p className="text-lg font-bold text-foreground mt-0.5">
+        <div className="flex flex-col gap-4 w-full lg:w-auto">
+          <div className="grid grid-cols-2 gap-3 sm:gap-4">
+            <div className="p-3 sm:p-4 rounded-2xl bg-background border border-border/60 text-center sm:text-left min-w-0">
+              <p className="text-[11px] sm:text-xs opacity-50 font-medium truncate">
+                Total payé (USD)
+              </p>
+              <p className="text-base sm:text-lg font-bold text-foreground mt-0.5 truncate">
                 {totals.USD} USD
               </p>
             </div>
-            <div className="flex-1 md:flex-initial p-4 rounded-2xl bg-background border border-border/60 text-center md:text-left min-w-30">
-              <p className="text-xs opacity-50 font-medium">Total payé (FC)</p>
-              <p className="text-lg font-bold text-foreground mt-0.5">
+            <div className="p-3 sm:p-4 rounded-2xl bg-background border border-border/60 text-center sm:text-left min-w-0">
+              <p className="text-[11px] sm:text-xs opacity-50 font-medium truncate">
+                Total payé (FC)
+              </p>
+              <p className="text-base sm:text-lg font-bold text-foreground mt-0.5 truncate">
                 {totals.FC} FC
               </p>
             </div>
           </div>
 
-          <div className="flex gap-3">
+          <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3">
             <button
               onClick={handleDownloadReport}
-              className="flex items-center justify-center gap-2 px-5 py-3 rounded-2xl border border-border font-semibold hover:bg-muted transition-all active:scale-[0.98] shrink-0"
+              className="flex items-center justify-center gap-2 px-5 py-3 rounded-2xl border border-border font-semibold hover:bg-muted transition-all active:scale-[0.98] shrink-0 w-full sm:w-auto"
             >
-              <FileDown className="size-5" />
+              <FileDown className="size-5 shrink-0" />
               Rapport PDF
             </button>
 
             <button
-              onClick={handleOpenReenrollmentModal}
-              className="flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-sacred-red text-white font-semibold shadow-md hover:bg-sacred-red/90 transition-all active:scale-[0.98] shrink-0"
+              onClick={handleDownloadBilletVacance}
+              className="flex items-center justify-center gap-2 px-5 py-3 rounded-2xl border border-border font-semibold hover:bg-muted transition-all active:scale-[0.98] shrink-0 w-full sm:w-auto"
             >
-              <UserPlus className="size-5" />
+              <Ticket className="size-5 shrink-0" />
+              Billet de vacances
+            </button>
+
+            <button
+              onClick={handleOpenReenrollmentModal}
+              className="flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-sacred-red text-white font-semibold shadow-md hover:bg-sacred-red/90 transition-all active:scale-[0.98] shrink-0 w-full sm:w-auto"
+            >
+              <UserPlus className="size-5 shrink-0" />
               Réinscription
             </button>
           </div>
@@ -364,33 +400,33 @@ export default function StudentProfile({ student }: StudentProfileProps) {
 
       {/* 2. SUIVI DES TRANCHES */}
       <div>
-        <h3 className="font-display text-lg font-semibold mb-3">
+        <h3 className="font-display text-base sm:text-lg font-semibold mb-3">
           État des tranches (Minerval)
         </h3>
-        <div className="grid sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
           {([1, 2, 3] as const).map(t => {
             const info = financialStatus.tranches[t]
             return (
               <div
                 key={t}
-                className="p-5 rounded-3xl bg-card border border-border space-y-3"
+                className="p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-card border border-border space-y-3"
               >
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
                   <span className="text-sm font-bold opacity-80">
                     Tranche {t}
                   </span>
                   {getTrancheBadge(t)}
                 </div>
                 <div className="space-y-1 pt-2 border-t border-border/60 text-xs">
-                  <div className="flex justify-between">
-                    <span className="opacity-60">Payé USD :</span>
-                    <span className="font-semibold">
+                  <div className="flex justify-between gap-2">
+                    <span className="opacity-60 shrink-0">Payé USD :</span>
+                    <span className="font-semibold text-right">
                       {info.paidUSD} / {info.requiredUSD} USD
                     </span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="opacity-60">Payé FC :</span>
-                    <span className="font-semibold">
+                  <div className="flex justify-between gap-2">
+                    <span className="opacity-60 shrink-0">Payé FC :</span>
+                    <span className="font-semibold text-right">
                       {info.paidFC} / {info.requiredFC} FC
                     </span>
                   </div>
@@ -402,8 +438,8 @@ export default function StudentProfile({ student }: StudentProfileProps) {
       </div>
 
       {/* 4. HISTORIQUE ET TÉLÉCHARGEMENT DES REÇUS */}
-      <div className="p-6 rounded-3xl bg-card border border-border space-y-4">
-        <h3 className="font-display text-lg font-semibold">
+      <div className="p-4 sm:p-6 rounded-2xl sm:rounded-3xl bg-card border border-border space-y-4">
+        <h3 className="font-display text-base sm:text-lg font-semibold">
           Reçus de paiement
         </h3>
 
@@ -416,10 +452,10 @@ export default function StudentProfile({ student }: StudentProfileProps) {
             {studentReceipts.map(receipt => (
               <div
                 key={receipt.id}
-                className="py-3 flex items-center justify-between gap-4 text-sm"
+                className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 text-sm"
               >
-                <div>
-                  <p className="font-semibold text-foreground">
+                <div className="min-w-0">
+                  <p className="font-semibold text-foreground truncate">
                     Reçu #{receipt.id.slice(0, 8)}
                   </p>
                   <p className="text-xs opacity-60">
@@ -428,8 +464,8 @@ export default function StudentProfile({ student }: StudentProfileProps) {
                   </p>
                 </div>
 
-                <div className="flex items-center gap-4">
-                  <span className="font-bold text-sacred-red">
+                <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4">
+                  <span className="font-bold text-sacred-red whitespace-nowrap">
                     {receipt.amount} {receipt.currency}
                   </span>
 
@@ -441,7 +477,7 @@ export default function StudentProfile({ student }: StudentProfileProps) {
                         '_blank'
                       )
                     }
-                    className="px-3 py-1.5 rounded-xl border border-border bg-background text-xs font-semibold hover:bg-muted transition-colors flex items-center gap-1.5"
+                    className="px-3 py-1.5 rounded-xl border border-border bg-background text-xs font-semibold hover:bg-muted transition-colors flex items-center gap-1.5 whitespace-nowrap shrink-0"
                   >
                     Télécharger
                   </button>
@@ -454,17 +490,17 @@ export default function StudentProfile({ student }: StudentProfileProps) {
 
       {/* 3. MODALE DE RÉINSCRIPTION */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm grid place-items-center p-4">
-          <div className="w-full max-w-md rounded-3xl bg-card border border-border p-6 shadow-2xl space-y-6 relative">
+        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm grid place-items-center p-3 sm:p-4">
+          <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl sm:rounded-3xl bg-card border border-border p-5 sm:p-6 shadow-2xl space-y-5 sm:space-y-6 relative">
             <button
               onClick={() => setIsModalOpen(false)}
-              className="absolute top-4 right-4 p-2 rounded-full hover:bg-muted transition-colors"
+              className="absolute top-3 right-3 sm:top-4 sm:right-4 p-2 rounded-full hover:bg-muted transition-colors"
             >
               <X className="size-5" />
             </button>
 
-            <div>
-              <h3 className="font-display text-xl font-bold">
+            <div className="pr-8">
+              <h3 className="font-display text-lg sm:text-xl font-bold">
                 Réinscription Scolaire
               </h3>
               <p className="text-sm opacity-60 mt-1">
@@ -517,18 +553,18 @@ export default function StudentProfile({ student }: StudentProfileProps) {
                   </select>
                 </div>
 
-                <div className="flex justify-end gap-3 pt-4 border-t border-border">
+                <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-4 border-t border-border">
                   <button
                     type="button"
                     onClick={() => setIsModalOpen(false)}
-                    className="px-4 py-2.5 rounded-full border border-border text-sm font-semibold hover:bg-muted"
+                    className="px-4 py-2.5 rounded-full border border-border text-sm font-semibold hover:bg-muted w-full sm:w-auto"
                   >
                     Annuler
                   </button>
                   <button
                     type="submit"
                     disabled={reenrollMutation.isPending || !selectedClassId}
-                    className="px-6 py-2.5 rounded-full bg-sacred-red text-white text-sm font-semibold shadow-md hover:scale-105 transition-transform disabled:opacity-50"
+                    className="px-6 py-2.5 rounded-full bg-sacred-red text-white text-sm font-semibold shadow-md hover:scale-105 transition-transform disabled:opacity-50 w-full sm:w-auto grid place-items-center"
                   >
                     {reenrollMutation.isPending ? (
                       <Loader2 className="size-4 animate-spin" />

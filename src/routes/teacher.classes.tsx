@@ -79,6 +79,7 @@ function TeacherClasses() {
     },
     { enabled: !!selectedIdClasse && isAuthorized }
   )
+  console.log(selectedIdClasse, studentsData, isAuthorized)
 
   const filteredStudents = useMemo(() => {
     return filterElement<EleveDetails>({
@@ -410,10 +411,6 @@ function TeacherClasses() {
                 <p className="text-sm opacity-60">
                   {cls.studentCount || 0} élève{cls.studentCount > 1 ? 's' : ''}
                 </p>
-              </div>
-
-              <div className="mt-4 pt-3 border-t border-border/50 text-[11px] font-mono opacity-40 group-hover:opacity-70 transition-opacity">
-                ID : {cls.id}
               </div>
             </div>
           ))}

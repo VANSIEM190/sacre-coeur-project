@@ -7,7 +7,10 @@ export function PublicFooter() {
       <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-4 gap-12">
         <div className="col-span-2">
           <div className="flex items-center gap-3 mb-6">
-            <div className="size-8 bg-sacred-red rounded-full" />
+            <img
+              src="/imgAcc.jpg"
+              className="size-10 bg-sacred-red rounded-full"
+            />
             <span className="font-display text-2xl tracking-tight">
               Sacré Cœur de Jésus
             </span>

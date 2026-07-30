@@ -63,7 +63,7 @@ class ClassService {
       nom_classe: classe.nom_classe,
       annee_scolaire: classe.annee_scolaire,
       studentCount: classe.inscriptions
-        ? classe.inscriptions.filter(i => i.status === 'valide').length
+        ? classe.inscriptions.filter(i => i.status === 'accepte').length
         : 0,
     }))
   }
@@ -84,7 +84,7 @@ class ClassService {
       .from('inscriptions')
       .select('eleves_details(*)')
       .eq('classe_id', classId)
-      .eq('status', 'en_attente')
+      .eq('status', 'accepte')
       .returns<SupabaseInscriptionRow[]>()
 
     if (error) {
@@ -97,6 +97,8 @@ class ClassService {
     const students: EleveDetails[] = data
       .map(row => row.eleves_details)
       .filter((student): student is EleveDetails => student !== null)
+
+    console.log(data)
 
     return students.sort((a, b) => a.lastName.localeCompare(b.lastName))
   }

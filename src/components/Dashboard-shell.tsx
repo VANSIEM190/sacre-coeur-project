@@ -90,10 +90,14 @@ export function DashboardShell({
       {/* --- TOPBAR MOBILE --- */}
       <header className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-card border-b border-border px-4 flex items-center justify-between z-40">
         <Link to="/" className="flex items-center gap-3">
-          <div className="size-8 bg-sacred-red rounded-full grid place-items-center shadow-lg shadow-sacred-red/20">
-            <div className="size-3 rounded-full border-2 border-sacred-gold" />
-          </div>
-          <p className="font-display text-md leading-tight">Sacré Cœur</p>
+          <img
+            src="/imgAcc.jpg"
+            className="size-8 rounded-full border-2 border-sacred-gold"
+          />
+
+          <p className="font-display text-md leading-tight">
+            Sacré Cœur de jesus
+          </p>
         </Link>
 
         <button
@@ -128,9 +132,10 @@ export function DashboardShell({
             to="/"
             className={`flex items-center gap-3 ${isCollapsed ? 'lg:gap-0' : ''}`}
           >
-            <div className="size-9 bg-sacred-red rounded-full grid place-items-center shadow-lg shadow-sacred-red/20 shrink-0">
-              <div className="size-3.5 rounded-full border-2 border-sacred-gold" />
-            </div>
+            <img
+              src="/imgAcc.jpg"
+              className="size-9 rounded-full border-2 border-sacred-gold"
+            />
             <div className={isCollapsed ? 'lg:hidden' : ''}>
               <p className="font-display text-lg leading-tight">Sacré Cœur</p>
               <p className="text-[10px] uppercase tracking-widest opacity-50">

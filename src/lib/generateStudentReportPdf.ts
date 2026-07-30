@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf'
 import type { EleveDetails, PaymentReceipt } from '@/lib/types'
+import { drawSchoolHeader, loadLogoAsBase64 } from '@/lib/schoolPdfHeader'
 
 type TrancheKey = 1 | 2 | 3
 type TrancheStatus = 'Non entamée' | 'Réglée' | 'Incomplète'
@@ -30,18 +31,23 @@ const getStudentFullName = (s: Partial<EleveDetails>): string => {
  * Génération 100% côté client — aucune donnée n'est envoyée à un serveur
  * tiers pour la création du PDF.
  */
-export function generateStudentReportPdf(data: StudentReportData): void {
+export async function generateStudentReportPdf(
+  data: StudentReportData
+): Promise<void> {
   const { student, schoolYear, totals, tranches, receipts } = data
   const doc = new jsPDF()
   const marginX = 15
-  let y = 20
+  const pageHeight = doc.internal.pageSize.getHeight()
 
-  // --- En-tête ---
-  doc.setFontSize(16)
+  const logo = await loadLogoAsBase64()
+  let y = drawSchoolHeader(doc, marginX, logo)
+
+  // --- Titre du rapport ---
+  doc.setFontSize(14)
   doc.setFont('helvetica', 'bold')
   doc.text('Rapport de scolarité', marginX, y)
 
-  doc.setFontSize(10)
+  doc.setFontSize(9)
   doc.setFont('helvetica', 'normal')
   doc.text(
     `Généré le ${new Date().toLocaleDateString()}`,
@@ -111,10 +117,10 @@ export function generateStudentReportPdf(data: StudentReportData): void {
     y += 6
   } else {
     receipts.forEach(r => {
-      // Nouvelle page si on approche du bas
-      if (y > doc.internal.pageSize.getHeight() - 20) {
+      // Nouvelle page si on approche du bas (avec en-tête répété)
+      if (y > pageHeight - 20) {
         doc.addPage()
-        y = 20
+        y = drawSchoolHeader(doc, marginX, logo)
       }
       doc.setFont('helvetica', 'normal')
       const date = new Date(r.paidAt).toLocaleDateString()

@@ -5,6 +5,8 @@ import { ArrowLeft, Search, Download, Loader2 } from 'lucide-react'
 import { useFetchData } from '@/hooks/useQuery'
 import { classService } from '@/services/classe/classe.service'
 import { horraireServices } from '@/services/schedule/schedule.service'
+import { getCurrentSchoolYear } from '@/utils/getCurrentSchoolYear'
+import { generateSchedulePdf } from '@/lib/generateSchedulePdf'
 
 const DAYS: ScheduleEntry['dayOfWeek'][] = [
   'Lundi',
@@ -19,6 +21,9 @@ function ParentHoraires() {
   // Navigation basée sur le type structurel ClassName réel de la base de données
   const [selectedClass, setSelectedClass] = useState<ClassName | null>(null)
   const [searchQuery, setSearchQuery] = useState<string>('')
+  const [isDownloading, setIsDownloading] = useState(false)
+
+  const currentSchoolYear = getCurrentSchoolYear()
 
   // 1. Chargement de toutes les classes via l'API (Lecture seule)
   const { data: allClasses, isLoading: isLoadingClasses } = useFetchData<
@@ -34,39 +39,18 @@ function ParentHoraires() {
     { enabled: !!selectedClass?.id }
   )
 
-  // Téléchargement propre du fichier de l'horaire
-  const handleDownloadSchedule = (targetClass: ClassName) => {
-    let txtContent = `EMPLOI DU TEMPS - CLASSE : ${targetClass.nom_classe}\n`
-    txtContent += `=========================================\n\n`
-
-    DAYS.forEach(day => {
-      const dayEntries = schedule
-        .filter(e => e.dayOfWeek === day)
-        .sort((a, b) => a.startTime.localeCompare(b.startTime))
-
-      txtContent += `--- ${day.toUpperCase()} ---\n`
-      if (dayEntries.length === 0) {
-        txtContent += `  Aucun cours programmé\n`
-      } else {
-        dayEntries.forEach(e => {
-          txtContent += `  [${e.startTime} - ${e.endTime}] ${e.subject} (Local: ${e.room}${e.teacherName ? ` · Prof: ${e.teacherName}` : ''})\n`
-        })
-      }
-      txtContent += `\n`
-    })
-
-    const blob = new Blob([txtContent], { type: 'text/plain;charset=utf-8' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.setAttribute(
-      'download',
-      `Horaire_${targetClass.nom_classe.replace(/\s+/g, '_')}.txt`
-    )
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
+  // Téléchargement de l'horaire en PDF (avec en-tête de l'école)
+  const handleDownloadSchedule = async (targetClass: ClassName) => {
+    setIsDownloading(true)
+    try {
+      await generateSchedulePdf({
+        targetClass,
+        schoolYear: currentSchoolYear,
+        schedule,
+      })
+    } finally {
+      setIsDownloading(false)
+    }
   }
 
   // Filtrage local en mémoire pour la barre de recherche
@@ -113,10 +97,15 @@ function ParentHoraires() {
           />
           <button
             onClick={() => handleDownloadSchedule(selectedClass)}
-            className="h-11 px-5 rounded-xl bg-primary text-primary-foreground font-medium flex items-center justify-center gap-2 hover:opacity-90 transition-opacity self-start sm:self-auto"
+            disabled={isDownloading}
+            className="h-11 px-5 rounded-xl bg-primary text-primary-foreground font-medium flex items-center justify-center gap-2 hover:opacity-90 transition-opacity self-start sm:self-auto disabled:opacity-50"
           >
-            <Download className="size-4" />
-            Télécharger l'horaire
+            {isDownloading ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <Download className="size-4" />
+            )}
+            Télécharger l'horaire (PDF)
           </button>
         </div>
 

@@ -120,6 +120,11 @@ export default function ParentChildrenManager() {
     setIsModalOpen(false)
   }
 
+  // Un enfant déjà inscrit (mode édition) ne doit plus pouvoir changer de
+  // classe librement depuis ce formulaire : ça passe uniquement par le
+  // flux de réinscription (voir StudentProfile).
+  const isClassLocked = !!editingStudent
+
   if (selectedStudent) {
     return (
       <div className="space-y-4">
@@ -274,7 +279,16 @@ export default function ParentChildrenManager() {
                   validate={validateWithZod(studentSchema)}
                   onSubmit={values => {
                     if (editingStudent) {
-                      updateMutation.mutate({ id: editingStudent.id, values })
+                      // La classe ne peut pas être modifiée depuis ce
+                      // formulaire : on garde la classe d'origine du
+                      // dossier, quoi qu'il arrive dans le formulaire.
+                      updateMutation.mutate({
+                        id: editingStudent.id,
+                        values: {
+                          ...values,
+                          currentClassName: editingStudent.currentClassName,
+                        },
+                      })
                     } else {
                       createMutation.mutate(values)
                     }
@@ -384,6 +398,12 @@ export default function ParentChildrenManager() {
                               value: cl.id,
                               label: cl.nom_classe,
                             }))}
+                            disabled={isClassLocked}
+                            helperText={
+                              isClassLocked
+                                ? 'La classe ne peut plus être modifiée ici : elle change uniquement via la réinscription.'
+                                : undefined
+                            }
                           />
                           <FormikField
                             name="previousSchoolName"
@@ -479,6 +499,10 @@ export default function ParentChildrenManager() {
           border-color: var(--sacred-red); 
           box-shadow: 0 0 0 3px var(--ring); 
         }
+        .fk-input:disabled {
+          cursor: not-allowed;
+          opacity: 0.6;
+        }
       `}</style>
     </div>
   )
@@ -523,17 +547,21 @@ function FormikSelect({
   name,
   label,
   options,
+  disabled,
+  helperText,
 }: {
   name: string
   label: string
   options: Array<{ value: string; label: string }>
+  disabled?: boolean
+  helperText?: string
 }) {
   return (
     <label className="block">
       <span className="text-xs font-semibold uppercase tracking-wider opacity-70 mb-2 block">
         {label}
       </span>
-      <Field name={name} as="select" className="fk-input">
+      <Field name={name} as="select" className="fk-input" disabled={disabled}>
         <option value="">Sélectionnez une option</option>
         {options?.map(option => (
           <option key={option.value} value={option.value}>
@@ -541,6 +569,7 @@ function FormikSelect({
           </option>
         ))}
       </Field>
+      {helperText && <p className="text-xs opacity-60 mt-1.5">{helperText}</p>}
       <ErrorMessage
         name={name}
         component="div"
