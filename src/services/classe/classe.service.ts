@@ -28,17 +28,6 @@ class ClassService {
     return UUID_REGEX.test(id)
   }
 
-  private async getCurrentUserId(): Promise<string> {
-    const {
-      data: { user },
-      error,
-    } = await supabase.auth.getUser()
-    if (error || !user) {
-      throw new Error('Session invalide ou utilisateur non authentifié.')
-    }
-    return user.id
-  }
-
   /**
    * studentCount ne compte que les inscriptions VALIDÉES.
    * La RLS reste la barrière principale ; ce filtre corrige surtout

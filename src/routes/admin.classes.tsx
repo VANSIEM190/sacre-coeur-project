@@ -16,11 +16,13 @@ import { SupabaseErrorHandler } from '@/services/core/Supabase.error.handler'
 import { toast } from 'sonner'
 import { useFetchData, useMutateData } from '@/hooks/useQuery'
 import { filterElement } from '@/utils/filterElements'
-import type { ClassName } from '@/lib/types'
+import type { ClassName, EleveDetails } from '@/lib/types'
+import { getCurrentSchoolYear } from '@/utils/getCurrentSchoolYear'
+import StudentProfile from './StudentProfile'
 
 function AdminClasses() {
   const queryClient = useQueryClient()
-  // const users = useAuthStore(s => s.registeredUsers)
+  const year = getCurrentSchoolYear()
   const remove = useAuthStore(s => s.removeUser)
   const [selected, setSelected] = useState<string | null>(null)
   const [selectedIdClasse, SetSelectedIdClasse] = useState<string>('')
@@ -28,8 +30,11 @@ function AdminClasses() {
   // États pour le Modal (création ET édition)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [newClassName, setNewClassName] = useState('')
-  const [schoolYear, setSchoolYear] = useState('2026-2027')
+  const [schoolYear, setSchoolYear] = useState(year)
   const [editingClass, setEditingClass] = useState<ClassName | null>(null)
+  const [selectedStudent, setSelectedStudent] = useState<EleveDetails | null>(
+    null
+  )
 
   // État pour le filtrage des élèves
   const [studentSearchQuery, setStudentSearchQuery] = useState('')
@@ -54,7 +59,7 @@ function AdminClasses() {
     setIsModalOpen(false)
     setEditingClass(null)
     setNewClassName('')
-    setSchoolYear('2026-2027')
+    setSchoolYear(year)
   }
 
   // 3. MUTATION : Création d'une classe avec TanStack Query
@@ -103,7 +108,7 @@ function AdminClasses() {
   const openCreateModal = () => {
     setEditingClass(null)
     setNewClassName('')
-    setSchoolYear('2026-2027')
+    setSchoolYear(year)
     setIsModalOpen(true)
   }
 
@@ -140,19 +145,31 @@ function AdminClasses() {
       deleteClassMutation.mutate(classId)
     }
   }
-  // Logique de filtrage textuelle sur la liste filtrée par classe
-  const list = studentsData.filter(s => s.classe_id === selectedIdClasse)
 
   const filteredStudents = useMemo(() => {
     return filterElement({
-      items: list,
+      items: studentsData,
       keys: ['firstName', 'middleName', 'lastName', 'phone'],
       searchQuery: studentSearchQuery,
     })
-  }, [list, studentSearchQuery])
+  }, [studentsData, studentSearchQuery])
 
   const isSavingClass =
     createClassMutation.isPending || updateClassMutation.isPending
+
+  if (selectedStudent) {
+    return (
+      <div>
+        <button
+          onClick={() => setSelectedStudent(null)}
+          className="text-sm opacity-60 hover:opacity-100 flex items-center gap-2 mb-4"
+        >
+          <ArrowLeft className="size-4" /> Retour à la classe
+        </button>
+        <StudentProfile student={selectedStudent} />
+      </div>
+    )
+  }
 
   if (selected) {
     return studentLoading ? (
@@ -201,7 +218,8 @@ function AdminClasses() {
           {filteredStudents.map(s => (
             <div
               key={s.id}
-              className="p-4 rounded-2xl bg-card border border-border flex items-center justify-between"
+              onClick={() => setSelectedStudent(s)}
+              className="p-4 rounded-2xl bg-card border border-border flex items-center justify-between cursor-pointer hover:bg-muted/40 transition-colors"
             >
               <div>
                 <p className="font-semibold">
@@ -210,11 +228,16 @@ function AdminClasses() {
                 <p className="text-xs opacity-60">phone : {s.phone}</p>
               </div>
               <button
-                onClick={() =>
-                  confirm(
-                    `Supprimer ${s.lastName} ${s.middleName} ${s.firstName} ?`
-                  ) && remove(s.id)
-                }
+                onClick={e => {
+                  e.stopPropagation()
+                  if (
+                    confirm(
+                      `Supprimer ${s.lastName} ${s.middleName} ${s.firstName} ?`
+                    )
+                  ) {
+                    remove(s.id)
+                  }
+                }}
                 className="size-9 rounded-full border border-border grid place-items-center hover:bg-destructive hover:text-destructive-foreground"
               >
                 <Trash2 className="size-4" />

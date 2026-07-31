@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import { PageHeader } from '@/components/Dashboard-shell'
 import { useAuthStore } from '@/stores/auth-store'
 import type { TeacherUser, EleveDetails } from '@/lib/types'
@@ -11,21 +11,12 @@ import { SupabaseErrorHandler } from '@/services/core/Supabase.error.handler'
 import { filterElement } from '@/utils/filterElements'
 import { ArrowLeft, Loader2, Search, X } from 'lucide-react'
 import { toast } from 'sonner'
-
-// À adapter selon les matières réellement enseignées dans ton établissement
-const SUBJECTS = [
-  'Mathématiques',
-  'Français',
-  'Sciences',
-  'Anglais',
-  'Histoire-Géographie',
-  'Éducation civique',
-]
-
-const CURRENT_SCHOOL_YEAR = '2025-2026' // idéalement centralisé quelque part
+import { getCurrentSchoolYear } from '@/utils/getCurrentSchoolYear'
+import { horraireServices } from '@/services/schedule/schedule.service'
 
 function TeacherClasses() {
   const queryClient = useQueryClient()
+  const year = getCurrentSchoolYear()
   const [selected, setSelected] = useState<string | null>(null)
   const [selectedIdClasse, setSelectedIdClasse] = useState<string>('')
   const [studentSearchQuery, setStudentSearchQuery] = useState('')
@@ -33,7 +24,7 @@ function TeacherClasses() {
   // --- MODAL BULLETIN ---
   const [gradeModalStudent, setGradeModalStudent] =
     useState<EleveDetails | null>(null)
-  const [subject, setSubject] = useState(SUBJECTS[0])
+  const [subject, setSubject] = useState('')
   const [tranche, setTranche] = useState<1 | 2 | 3>(1)
   const [score, setScore] = useState<string>('')
   const [maxScore, setMaxScore] = useState<string>('20')
@@ -79,7 +70,6 @@ function TeacherClasses() {
     },
     { enabled: !!selectedIdClasse && isAuthorized }
   )
-  console.log(selectedIdClasse, studentsData, isAuthorized)
 
   const filteredStudents = useMemo(() => {
     return filterElement<EleveDetails>({
@@ -90,36 +80,67 @@ function TeacherClasses() {
     })
   }, [studentsData, studentSearchQuery])
 
+  const { data: teacherCourses = [], isLoading: isLoadingSubjects } =
+    useFetchData(
+      ['teacherCourses', freshTeacherData?.fullName, selectedIdClasse],
+      () =>
+        horraireServices.getTeacherCoursesInClass(
+          freshTeacherData!.id,
+          selectedIdClasse
+        ),
+      {
+        enabled: !!freshTeacherData?.id && !!selectedIdClasse && isAuthorized,
+      }
+    )
+
+  const teacherSubjects = useMemo(
+    () => teacherCourses.map(c => c.subject),
+    [teacherCourses]
+  )
+
+  const selectedSubject = subject || teacherSubjects[0] || ''
+
   // --- RÉCUPÉRATION DE LA NOTE EXISTANTE (pré-remplissage) ---
   const { data: existingGrade, isLoading: isLoadingGrade } = useFetchData(
-    ['grade', gradeModalStudent?.id, subject, tranche],
+    ['grade', gradeModalStudent?.id, selectedSubject, tranche],
     () =>
       gradeService.getGrade(
         gradeModalStudent!.id,
-        subject,
+        selectedSubject,
         tranche,
-        CURRENT_SCHOOL_YEAR
+        year
       ),
-    { enabled: !!gradeModalStudent }
+    { enabled: !!gradeModalStudent && !!selectedSubject }
   )
 
-  // Synchronise le formulaire avec la note existante (ou le vide) à chaque changement de matière/tranche/élève
-  useEffect(() => {
+  // Ajustement du formulaire pendant le rendu (pas dans un effect) :
+  // pattern officiel React pour resynchroniser un state après un
+  // changement de contexte (élève / matière / tranche / arrivée de la
+  // donnée async).
+  const [prevGradeKey, setPrevGradeKey] = useState<string | null>(null)
+  const gradeKey = gradeModalStudent
+    ? `${gradeModalStudent.id}|${selectedSubject}|${tranche}|${
+        isLoadingGrade ? 'loading' : existingGrade ? 'loaded' : 'empty'
+      }`
+    : null
+
+  if (gradeKey !== prevGradeKey) {
+    setPrevGradeKey(gradeKey)
     if (existingGrade) {
       setScore(String(existingGrade.score))
       setMaxScore(String(existingGrade.max_score))
-    } else {
+    } else if (!isLoadingGrade) {
       setScore('')
       setMaxScore('20')
     }
-  }, [existingGrade])
+  }
 
   const saveGradeMutation = useMutateData(
     (entry: GradeEntry) => gradeService.saveGrade(entry),
     {
       onSuccess: () => {
         queryClient.invalidateQueries({
-          queryKey: ['grade', gradeModalStudent?.id, subject, tranche],
+          queryKey: ['grade', gradeModalStudent?.id, selectedSubject, tranche],
         })
         toast.success('Note enregistrée')
       },
@@ -129,13 +150,17 @@ function TeacherClasses() {
 
   const handleOpenGradeModal = (student: EleveDetails) => {
     setGradeModalStudent(student)
-    setSubject(SUBJECTS[0])
+    setSubject('')
     setTranche(1)
   }
 
   const handleSaveGrade = (e: React.FormEvent) => {
     e.preventDefault()
     if (!gradeModalStudent || !currentUser?.id) return
+    if (!selectedSubject || !teacherSubjects.includes(selectedSubject)) {
+      toast.error("Vous n'êtes pas autorisé à noter cette matière.")
+      return
+    }
 
     const numericScore = Number(score)
     const numericMax = Number(maxScore)
@@ -153,11 +178,11 @@ function TeacherClasses() {
       eleve_id: gradeModalStudent.id,
       classe_id: selectedIdClasse,
       teacher_id: currentUser.id,
-      subject,
+      subject: selectedSubject,
       tranche,
       score: numericScore,
       max_score: numericMax,
-      school_year: CURRENT_SCHOOL_YEAR,
+      school_year: year,
     })
   }
 
@@ -270,17 +295,28 @@ function TeacherClasses() {
                     <label className="text-xs uppercase tracking-widest opacity-70 mb-1 block">
                       Matière
                     </label>
-                    <select
-                      value={subject}
-                      onChange={e => setSubject(e.target.value)}
-                      className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:outline-none focus:border-primary"
-                    >
-                      {SUBJECTS.map(s => (
-                        <option key={s} value={s}>
-                          {s}
-                        </option>
-                      ))}
-                    </select>
+                    {isLoadingSubjects ? (
+                      <div className="flex items-center gap-2 py-2.5 text-xs opacity-60">
+                        <Loader2 className="size-4 animate-spin text-primary" />
+                        <span>Chargement...</span>
+                      </div>
+                    ) : teacherSubjects.length === 0 ? (
+                      <p className="text-xs text-destructive py-2.5">
+                        Aucune matière ne vous est attribuée pour cette classe.
+                      </p>
+                    ) : (
+                      <select
+                        value={selectedSubject}
+                        onChange={e => setSubject(e.target.value)}
+                        className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:outline-none focus:border-primary"
+                      >
+                        {teacherSubjects.map(s => (
+                          <option key={s} value={s}>
+                            {s}
+                          </option>
+                        ))}
+                      </select>
+                    )}
                   </div>
 
                   <div>

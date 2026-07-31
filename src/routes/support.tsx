@@ -58,7 +58,7 @@ function SupportPage() {
 
           <div className="grid md:grid-cols-3 gap-4 mb-16">
             {[
-              { icon: Phone, t: 'Par téléphone', v: '+243 81 000 00 00' },
+              { icon: Phone, t: 'Par téléphone', v: '+243 810 860 751' },
               {
                 icon: MessageCircle,
                 t: 'Par email',

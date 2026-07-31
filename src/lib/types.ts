@@ -139,14 +139,15 @@ export interface Course {
 
 export interface ScheduleEntry {
   id: string
-  dayOfWeek: Day
+  classe_id: string
+  teacher_id: string | null
+  dayOfWeek: 'Lundi' | 'Mardi' | 'Mercredi' | 'Jeudi' | 'Vendredi' | 'Samedi'
   startTime: string
   endTime: string
   subject: string
-  teacherName: string
   room: string
-  classe_id: string
-  created_at: string
+  teacherName: string | null
+  created_at?: string
 }
 
 export interface GradingSheet {

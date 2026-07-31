@@ -50,6 +50,28 @@ class TeacherService {
     }
   }
 
+  async getAllTeacher(): Promise<TeacherUser[]> {
+    const { data, error } = await supabase
+      .from('enseignants_details')
+      .select('*')
+      .order('fullName', { ascending: true })
+
+    if (error) {
+      console.error('[TeacherService.getAllTeacher]:', error.message)
+      throw new Error('Impossible de récupérer la liste des enseignants.')
+    }
+
+    return (data || []).map(t => ({
+      id: t.id,
+      email: t.email,
+      role: 'teacher' as const,
+      fullName: t.fullName,
+      teacherAccessId: t.teacherAccessId,
+      assignedclasses: t.assignedclasses || [],
+      createdAt: t.created_at,
+    }))
+  }
+
   async getDetailsByEmail(email: string): Promise<TeacherUser | null> {
     const { data: teacherData, error } = await supabase
       .from('enseignants_details')

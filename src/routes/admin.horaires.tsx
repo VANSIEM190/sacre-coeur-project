@@ -1,6 +1,6 @@
 import { PageHeader } from '@/components/Dashboard-shell'
 import { useState, useMemo } from 'react'
-import type { ScheduleEntry, ClassName } from '@/lib/types'
+import type { ScheduleEntry, ClassName, TeacherUser } from '@/lib/types'
 import {
   Plus,
   Trash2,
@@ -16,6 +16,19 @@ import { useFetchData, useMutateData } from '@/hooks/useQuery'
 import { classService } from '@/services/classe/classe.service'
 import { horraireServices } from '@/services/schedule/schedule.service'
 import { useQueryClient } from '@tanstack/react-query'
+import { teacherService } from '@/services/teacher/teacher.service'
+import { SupabaseErrorHandler } from '@/services/core/Supabase.error.handler'
+
+interface CreateFormState {
+  classe_id: string
+  teacher_id: string
+  dayOfWeek: ScheduleEntry['dayOfWeek']
+  startTime: string
+  endTime: string
+  subject: string
+  room: string
+  teacherName: string
+}
 
 const DAYS: ScheduleEntry['dayOfWeek'][] = [
   'Lundi',
@@ -26,35 +39,34 @@ const DAYS: ScheduleEntry['dayOfWeek'][] = [
   'Samedi',
 ]
 
-// Type local strict pour l'état du formulaire d'édition
 interface EditFormState {
   startTime: string
   endTime: string
   subject: string
   room: string
+  teacher_id: string
   teacherName: string
 }
 
 function AdminHoraires() {
   const queryClient = useQueryClient()
 
-  // Navigation basée sur le type structurel ClassName réel de ta base de données
   const [selectedClass, setSelectedClass] = useState<ClassName | null>(null)
   const [searchQuery, setSearchQuery] = useState<string>('')
 
-  // États pour l'édition d'une entrée d'horaire dotés d'un typage précis
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editForm, setEditForm] = useState<EditFormState>({
     startTime: '',
     endTime: '',
     subject: '',
     room: '',
+    teacher_id: '',
     teacherName: '',
   })
 
-  // Formulaire d'ajout typé avec omission de la clé système 'id' et 'created_at'
-  const [form, setForm] = useState<Omit<ScheduleEntry, 'id' | 'created_at'>>({
+  const [form, setForm] = useState<CreateFormState>({
     classe_id: '',
+    teacher_id: '',
     dayOfWeek: 'Lundi',
     startTime: '08:00',
     endTime: '09:30',
@@ -63,12 +75,10 @@ function AdminHoraires() {
     teacherName: '',
   })
 
-  // 1. Chargement de toutes les classes via l'API (Typé avec ClassName[])
   const { data: allClasses, isLoading: isLoadingClasses } = useFetchData<
     ClassName[]
   >(['classes'], classService.getAllClasses)
 
-  // 2. Chargement des périodes de cours (Typé avec ScheduleEntry[])
   const { data: schedule = [], isLoading: isLoadingSchedule } = useFetchData<
     ScheduleEntry[]
   >(
@@ -77,20 +87,34 @@ function AdminHoraires() {
     { enabled: !!selectedClass?.id }
   )
 
-  // 3. Mutations TanStack Query sécurisées et typées
+  const { data: allTeachers = [] } = useFetchData<TeacherUser[]>(
+    ['teachers'],
+    teacherService.getAllTeacher
+  )
+
   const createMutation = useMutateData<
     ScheduleEntry,
     Error,
     Omit<ScheduleEntry, 'id' | 'created_at'>
-  >(horraireServices.createScheduleEntry, {
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ['schedule', selectedClass?.id],
-      })
-      setForm(prev => ({ ...prev, subject: '', room: '', teacherName: '' }))
-    },
-    onError: err => alert(`Erreur de création : ${err.message}`),
-  })
+  >(
+    (entry: Omit<ScheduleEntry, 'id' | 'created_at'>) =>
+      horraireServices.createScheduleEntry(entry),
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries({
+          queryKey: ['schedule', selectedClass?.id],
+        })
+        setForm(prev => ({
+          ...prev,
+          subject: '',
+          room: '',
+          teacher_id: '',
+          teacherName: '',
+        }))
+      },
+      onError: err => alert(`Erreur de création : ${err.message}`),
+    }
+  )
 
   const updateMutation = useMutateData<
     ScheduleEntry,
@@ -106,22 +130,23 @@ function AdminHoraires() {
       })
       setEditingId(null)
     },
-    onError: err => alert(`Erreur de modification : ${err.message}`),
+    onError: err =>
+      SupabaseErrorHandler.handle(`Erreur de modification : ${err.message}`),
   })
 
   const deleteMutation = useMutateData<boolean, Error, string>(
-    horraireServices.deleteScheduleEntry,
+    (id: string) => horraireServices.deleteScheduleEntry(id),
     {
       onSuccess: () => {
         queryClient.invalidateQueries({
           queryKey: ['schedule', selectedClass?.id],
         })
       },
-      onError: err => alert(`Erreur de suppression : ${err.message}`),
+      onError: err =>
+        SupabaseErrorHandler.handle(`Erreur de suppression : ${err.message}`),
     }
   )
 
-  // Initialisation sécurisée de l'édition
   const handleStartEdit = (entry: ScheduleEntry) => {
     setEditingId(entry.id)
     setEditForm({
@@ -129,12 +154,17 @@ function AdminHoraires() {
       endTime: entry.endTime,
       subject: entry.subject,
       room: entry.room,
+      teacher_id: entry.teacher_id || '',
       teacherName: entry.teacherName || '',
     })
   }
 
   const handleUpdateSubmit = (e: React.FormEvent, id: string) => {
     e.preventDefault()
+    if (!editForm.teacher_id) {
+      alert('Veuillez sélectionner un enseignant.')
+      return
+    }
     updateMutation.mutate({ id, payload: editForm })
   }
 
@@ -145,10 +175,32 @@ function AdminHoraires() {
       alert('Veuillez sélectionner ou créer une classe au préalable.')
       return
     }
+    if (!form.teacher_id) {
+      alert('Veuillez sélectionner un enseignant.')
+      return
+    }
     createMutation.mutate({
       ...form,
       classe_id: targetClassId,
     })
+  }
+
+  const handleSelectTeacher = (teacherId: string) => {
+    const teacher = allTeachers.find(t => t.id === teacherId)
+    setForm(prev => ({
+      ...prev,
+      teacher_id: teacherId,
+      teacherName: teacher?.fullName || '',
+    }))
+  }
+
+  const handleSelectEditTeacher = (teacherId: string) => {
+    const teacher = allTeachers.find(t => t.id === teacherId)
+    setEditForm(prev => ({
+      ...prev,
+      teacher_id: teacherId,
+      teacherName: teacher?.fullName || '',
+    }))
   }
 
   const handleDownloadSchedule = (targetClass: ClassName) => {
@@ -185,7 +237,6 @@ function AdminHoraires() {
     URL.revokeObjectURL(url)
   }
 
-  // Filtrage à chaud sur l'état en cache
   const filteredSchedule = useMemo<ScheduleEntry[]>(() => {
     return schedule.filter(s => {
       return (
@@ -295,22 +346,30 @@ function AdminHoraires() {
                                   className="px-3 py-1.5 rounded-xl border border-border bg-background text-xs"
                                 />
                               </div>
+
                               <div className="flex flex-col gap-1">
                                 <label className="text-[10px] uppercase font-semibold opacity-50">
                                   Professeur
                                 </label>
-                                <input
+                                <select
                                   required
-                                  value={editForm.teacherName}
+                                  value={editForm.teacher_id}
                                   onChange={e =>
-                                    setEditForm({
-                                      ...editForm,
-                                      teacherName: e.target.value,
-                                    })
+                                    handleSelectEditTeacher(e.target.value)
                                   }
                                   className="px-3 py-1.5 rounded-xl border border-border bg-background text-xs"
-                                />
+                                >
+                                  <option value="" disabled>
+                                    Choisir
+                                  </option>
+                                  {allTeachers.map(t => (
+                                    <option key={t.id} value={t.id}>
+                                      {t.fullName}
+                                    </option>
+                                  ))}
+                                </select>
                               </div>
+
                               <div className="flex flex-col gap-1">
                                 <label className="text-[10px] uppercase font-semibold opacity-50">
                                   Début
@@ -500,13 +559,23 @@ function AdminHoraires() {
           onChange={e => setForm({ ...form, subject: e.target.value })}
           className="px-4 py-3 rounded-xl border border-border bg-background text-sm"
         />
-        <input
+
+        <select
           required
-          placeholder="Nom du Professeur"
-          value={form.teacherName}
-          onChange={e => setForm({ ...form, teacherName: e.target.value })}
+          value={form.teacher_id}
+          onChange={e => handleSelectTeacher(e.target.value)}
           className="px-4 py-3 rounded-xl border border-border bg-background text-sm"
-        />
+        >
+          <option value="" disabled>
+            Choisir l'enseignant
+          </option>
+          {allTeachers.map(t => (
+            <option key={t.id} value={t.id}>
+              {t.fullName}
+            </option>
+          ))}
+        </select>
+
         <input
           type="time"
           value={form.startTime}

@@ -29,6 +29,7 @@ import {
   Ticket,
 } from 'lucide-react'
 import { generateStudentReportPdf } from '@/lib/generateStudentReportPdf'
+import { useAuthStore } from '@/stores/auth-store'
 
 interface StudentProfileProps {
   student: EleveDetails
@@ -56,6 +57,8 @@ const getStudentFullName = (s: Partial<EleveDetails>): string => {
 
 export default function StudentProfile({ student }: StudentProfileProps) {
   const currentSchoolYear = getCurrentSchoolYear()
+  const role = useAuthStore(s => s.currentUser?.role)
+  const isAdmin = role === 'admin'
 
   // --- ÉTATS POUR LA MODALE DE RÉINSCRIPTION ---
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -379,21 +382,25 @@ export default function StudentProfile({ student }: StudentProfileProps) {
               Rapport PDF
             </button>
 
-            <button
-              onClick={handleDownloadBilletVacance}
-              className="flex items-center justify-center gap-2 px-5 py-3 rounded-2xl border border-border font-semibold hover:bg-muted transition-all active:scale-[0.98] shrink-0 w-full sm:w-auto"
-            >
-              <Ticket className="size-5 shrink-0" />
-              Billet de vacances
-            </button>
+            {!isAdmin && (
+              <>
+                <button
+                  onClick={handleDownloadBilletVacance}
+                  className="flex items-center justify-center gap-2 px-5 py-3 rounded-2xl border border-border font-semibold hover:bg-muted transition-all active:scale-[0.98] shrink-0 w-full sm:w-auto"
+                >
+                  <Ticket className="size-5 shrink-0" />
+                  Billet de vacances
+                </button>
 
-            <button
-              onClick={handleOpenReenrollmentModal}
-              className="flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-sacred-red text-white font-semibold shadow-md hover:bg-sacred-red/90 transition-all active:scale-[0.98] shrink-0 w-full sm:w-auto"
-            >
-              <UserPlus className="size-5 shrink-0" />
-              Réinscription
-            </button>
+                <button
+                  onClick={handleOpenReenrollmentModal}
+                  className="flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-sacred-red text-white font-semibold shadow-md hover:bg-sacred-red/90 transition-all active:scale-[0.98] shrink-0 w-full sm:w-auto"
+                >
+                  <UserPlus className="size-5 shrink-0" />
+                  Réinscription
+                </button>
+              </>
+            )}
           </div>
         </div>
       </div>
