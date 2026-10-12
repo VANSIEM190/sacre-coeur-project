@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "types": [
+      "node"
+    ],
+    "tsBuildInfoFile": "./node_modules/.tmp/server.tsbuildinfo"
+  },
+  "include": [
+    "supabase/functions/**/*.ts"
+  ]
+}
+

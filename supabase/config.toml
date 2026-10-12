@@ -1,0 +1,7 @@
+project_id = "sacre-coeur-project"
+
+[functions.teacher-accounts]
+verify_jwt = true
+entrypoint = "./functions/teacher-accounts/index.ts"
+import_map = "./functions/teacher-accounts/deno.json"
+

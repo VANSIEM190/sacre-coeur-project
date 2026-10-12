@@ -1,0 +1,15 @@
+{
+  "name": "@sacre-coeur/domain",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    "./types": "./src/types.ts",
+    "./validators/*": "./src/validators/*.ts",
+    "./utils/*": "./src/utils/*.ts",
+    "./*": "./src/*.ts"
+  },
+  "dependencies": {
+    "zod": "^4.4.3"
+  }
+}

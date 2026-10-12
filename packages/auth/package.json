@@ -1,0 +1,24 @@
+{
+  "name": "@sacre-coeur/auth",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    "./stores/*": "./src/stores/*.ts",
+    "./providers/*": "./src/providers/*.tsx",
+    "./guards/*": "./src/guards/*.tsx",
+    "./components/*": "./src/components/*.tsx",
+    "./*": "./src/*.ts"
+  },
+  "dependencies": {
+    "@sacre-coeur/data-access": "*",
+    "@sacre-coeur/domain": "*",
+    "@tanstack/react-query": "^5.100.10",
+    "react-router-dom": "^7.15.1",
+    "zustand": "^5.0.13"
+  },
+  "peerDependencies": {
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6"
+  }
+}

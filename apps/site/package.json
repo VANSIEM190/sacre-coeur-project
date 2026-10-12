@@ -1,0 +1,27 @@
+{
+  "name": "@sacre-coeur/site",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@sacre-coeur/auth": "*",
+    "@sacre-coeur/data-access": "*",
+    "@sacre-coeur/domain": "*",
+    "@sacre-coeur/school-features": "*",
+    "@sacre-coeur/ui": "*",
+    "@tanstack/react-query": "^5.100.10",
+    "formik": "^2.4.9",
+    "framer-motion": "^12.38.0",
+    "lucide-react": "^1.16.0",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
+    "react-icons": "^5.7.0",
+    "react-router-dom": "^7.15.1",
+    "sonner": "^2.0.7"
+  }
+}

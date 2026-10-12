@@ -1,0 +1,32 @@
+{
+  "name": "@sacre-coeur/school-features",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    "./students/components/*": "./src/students/components/*.tsx",
+    "./profile/*": "./src/profile/*.tsx",
+    "./layouts/*": "./src/layouts/*.tsx",
+    "./app/*": "./src/app/*.tsx",
+    "./feedback/*": "./src/feedback/*.ts",
+    "./pdf/*": "./src/pdf/*.ts",
+    "./hooks/*": "./src/hooks/*.ts",
+    "./schedules/*": "./src/schedules/*.ts"
+  },
+  "dependencies": {
+    "@sacre-coeur/auth": "*",
+    "@sacre-coeur/data-access": "*",
+    "@sacre-coeur/domain": "*",
+    "@sacre-coeur/ui": "*",
+    "@tanstack/react-query": "^5.100.10",
+    "formik": "^2.4.9",
+    "jspdf": "^4.2.1",
+    "lucide-react": "^1.16.0",
+    "react-router-dom": "^7.15.1",
+    "sonner": "^2.0.7"
+  },
+  "peerDependencies": {
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6"
+  }
+}

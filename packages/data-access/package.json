@@ -1,0 +1,23 @@
+{
+  "name": "@sacre-coeur/data-access",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    "./services/*": "./src/services/*.ts",
+    "./supabase/*": "./src/supabase/*.ts",
+    "./hooks/*": "./src/hooks/*.ts",
+    "./utils/*": "./src/utils/*.ts",
+    "./*": "./src/*.ts"
+  },
+  "dependencies": {
+    "@sacre-coeur/domain": "*",
+    "@supabase/supabase-js": "^2.107.0",
+    "@tanstack/react-query": "^5.100.10",
+    "nanoid": "^5.1.14"
+  },
+  "peerDependencies": {
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6"
+  }
+}
