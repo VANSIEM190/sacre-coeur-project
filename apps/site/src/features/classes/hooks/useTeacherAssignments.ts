@@ -13,13 +13,13 @@ export function useTeacherAssignments() {
     () => teacherService.getDetailsByUserId(currentUser!.id),
     { enabled: currentUser?.role === 'teacher' }
   )
-  const classes = useFetchData(['classes'], () => classService.getAllClasses())
   const assignedClassIds = profile.data?.assignedclasses ?? []
-  const assignedClasses = (classes.data ?? []).filter(
-    schoolClass =>
-      assignedClassIds.includes(schoolClass.id) &&
-      schoolClass.annee_scolaire === schoolYear
+  const classes = useFetchData(
+    ['teacherClasses', currentUser?.id, schoolYear, assignedClassIds],
+    () => classService.getTeacherAssignedClasses(assignedClassIds, schoolYear),
+    { enabled: currentUser?.role === 'teacher' && !!profile.data }
   )
+  const assignedClasses = classes.data ?? []
 
   return {
     currentUser,

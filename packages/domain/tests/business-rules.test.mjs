@@ -78,7 +78,7 @@ test('la réinscription conserve la filière et exclut les classes des autres ni
   assert.deepEqual(getEligibleReenrollmentClasses('1ère Scientifique', classes).map(classe => classe.nom_classe), ['2ème Scientifique'])
 })
 
-test("l'invitation d'enseignant refuse les affectations sans UUID réel", () => {
+test("la création de fiche enseignant refuse les affectations sans UUID réel", () => {
   assert.equal(createTeacherSchema.safeParse({ fullName: 'Professeur', email: 'prof@ecole.test', assignedclasses: ['classe-inventée'] }).success, false)
   assert.equal(createTeacherSchema.safeParse({ fullName: 'Professeur', email: 'prof@ecole.test', assignedclasses: ['11111111-1111-4111-8111-111111111111'] }).success, true)
 })

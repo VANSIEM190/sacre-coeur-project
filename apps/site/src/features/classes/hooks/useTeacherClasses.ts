@@ -3,7 +3,7 @@ import { useFetchData } from '@sacre-coeur/data-access/hooks/useQuery'
 import { classService } from '@sacre-coeur/data-access/services/classe/classe.service'
 import { horraireServices } from '@sacre-coeur/data-access/services/schedule/schedule.service'
 import { filterElement } from '@sacre-coeur/domain/utils/filterElements'
-import type { EleveDetails } from '@sacre-coeur/domain/types'
+import type { TeacherRosterStudent } from '@sacre-coeur/domain/types'
 import { useTeacherAssignments } from './useTeacherAssignments'
 
 export function useTeacherClasses() {
@@ -14,9 +14,9 @@ export function useTeacherClasses() {
     ? requestedClassId
     : assignments.assignedClasses[0]?.id ?? ''
   const selectedClass = assignments.assignedClasses.find(item => item.id === selectedIdClasse) ?? null
-  const studentsQuery = useFetchData<EleveDetails[]>(
-    ['students', 'class', selectedIdClasse],
-    () => classService.getStudentsInClass(selectedIdClasse),
+  const studentsQuery = useFetchData<TeacherRosterStudent[]>(
+    ['teacherStudents', selectedIdClasse, assignments.schoolYear],
+    () => classService.getTeacherStudentsInClass(selectedIdClasse, assignments.schoolYear),
     { enabled: !!selectedIdClasse },
   )
   const subjectsQuery = useFetchData(
@@ -26,7 +26,7 @@ export function useTeacherClasses() {
   )
   const filteredStudents = useMemo(() => filterElement({
     items: studentsQuery.data ?? [],
-    keys: ['firstName', 'middleName', 'lastName', 'phone'],
+    keys: ['firstName', 'middleName', 'lastName'],
     searchQuery: studentSearchQuery,
   }), [studentsQuery.data, studentSearchQuery])
 
@@ -41,6 +41,9 @@ export function useTeacherClasses() {
     students: filteredStudents,
     isLoadingStudents: studentsQuery.isLoading,
     isLoadingSubjects: subjectsQuery.isLoading,
+    assignmentError: assignments.error,
+    studentError: studentsQuery.error,
+    subjectsError: subjectsQuery.error,
     error: assignments.error ?? studentsQuery.error ?? subjectsQuery.error,
   }
 }

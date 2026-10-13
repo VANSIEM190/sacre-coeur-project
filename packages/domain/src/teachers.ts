@@ -10,7 +10,7 @@ export const createTeacherSchema = z.object({
 
 export type RegisterTeacherInput = z.infer<typeof createTeacherSchema>;
 
-/** The current Supabase schema stores assigned class IDs in a text column. */
+/** Read class IDs from the current text[] schema and the legacy text formats. */
 export function parseAssignedClassIds(value: unknown): string[] {
   if (Array.isArray(value))
     return value.filter((item): item is string => typeof item === "string");
@@ -28,6 +28,6 @@ export function parseAssignedClassIds(value: unknown): string[] {
     .filter(Boolean);
 }
 
-export function serializeAssignedClassIds(value: readonly string[]): string {
-  return JSON.stringify([...new Set(value)]);
+export function serializeAssignedClassIds(value: readonly string[]): string[] {
+  return [...new Set(value)];
 }

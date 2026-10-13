@@ -4,7 +4,6 @@ import type { UserRole } from "@sacre-coeur/domain/types";
 import { authService } from "@sacre-coeur/data-access/services/auth/auth.service";
 import { getErrorMessage } from "@sacre-coeur/data-access/services/core/Supabase.error.handler";
 import { supabase } from "@sacre-coeur/data-access/supabase/supabaseClient";
-import { consumePasswordSetupCallback } from "@sacre-coeur/data-access/supabase/password-callback";
 import { setVerifiedSession, useAuthStore } from "../stores/auth-store";
 
 interface AuthProviderProps {
@@ -73,7 +72,6 @@ export function AuthProvider({ allowedRoles, children }: AuthProviderProps) {
       if (disposed) return;
       if (event === "SIGNED_OUT") {
         requestVersion += 1;
-        consumePasswordSetupCallback();
         setVerifiedSession(null);
         queryClient.clear();
         return;

@@ -42,8 +42,13 @@ export default function LoginPage() {
           </div>
         ) : (
           <p>
-            Première connexion ? Définissez votre mot de passe avec le lien
-            d’invitation reçu par e-mail.
+            Première inscription ?{" "}
+            <Link
+              to="/inscription-enseignant"
+              className="font-semibold text-sacred-red hover:underline"
+            >
+              Activez votre compte avec votre matricule
+            </Link>
           </p>
         )
       }

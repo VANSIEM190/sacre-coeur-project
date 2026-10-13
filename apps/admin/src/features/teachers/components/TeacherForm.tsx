@@ -42,7 +42,7 @@ export function TeacherForm({
       <div>
         <h2 className="font-display text-xl font-bold">Créer un professeur</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Un lien d’activation sera envoyé à son adresse e-mail.
+          Après création, transmettez-lui son matricule d’activation en privé.
         </p>
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
@@ -124,7 +124,7 @@ export function TeacherForm({
         ) : (
           <Plus className="size-4" />
         )}
-        Créer le compte
+        Créer la fiche
       </button>
     </form>
   );

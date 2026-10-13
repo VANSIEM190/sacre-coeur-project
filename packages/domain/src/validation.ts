@@ -38,6 +38,11 @@ export function validateTranche(
     throw new DomainError("Tranche invalide : choisissez 1, 2 ou 3.");
 }
 
+export function validateAcademicTerm(value: number): asserts value is 1 | 2 | 3 {
+  if (value !== 1 && value !== 2 && value !== 3)
+    throw new DomainError("Période scolaire invalide : choisissez 1, 2 ou 3.")
+}
+
 export function validateGrade(score: number, maxScore: number): void {
   if (
     !Number.isFinite(score) ||

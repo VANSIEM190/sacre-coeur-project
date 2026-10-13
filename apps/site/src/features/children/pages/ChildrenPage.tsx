@@ -3,6 +3,7 @@ import StudentProfile from '@sacre-coeur/school-features/students/components/Stu
 import { ChildrenList } from '../components/ChildrenList'
 import { StudentFormDialog } from '../components/StudentFormDialog'
 import { useParentChildren } from '../hooks/useParentChildren'
+import { FormikFieldStyles } from '../../../shared/forms/FormikFields'
 
 export default function ParentChildrenManager() {
   const page = useParentChildren()
@@ -19,6 +20,6 @@ export default function ParentChildrenManager() {
     </header>
     {page.isLoading ? <div className="flex justify-center py-12"><Loader2 className="size-8 animate-spin text-sacred-red" /></div> : page.children.length === 0 ? <div className="rounded-3xl border border-dashed border-border py-12 text-center opacity-60"><p className="text-sm">Aucun enfant n'est inscrit pour le moment.</p></div> : <ChildrenList children={page.children} classes={page.classes} isDeleting={page.deleteMutation.isPending} onSelect={page.setSelectedStudent} onEdit={student => { page.setEditingStudent(student); page.setIsModalOpen(true) }} onDelete={page.deleteStudent} />}
     <StudentFormDialog isOpen={page.isModalOpen} student={page.editingStudent} classes={page.classes} isSaving={page.isSaving} onClose={page.closeModal} onSubmit={page.submitStudent} />
-    <style>{'.fk-input { width: 100%; padding: 0.75rem 0.875rem; border-radius: 0.625rem; border: 1px solid var(--color-border); background: var(--color-card); color: var(--color-foreground); font-size: 0.9rem; outline: none; transition: all 0.2s; } .fk-input:focus { border-color: var(--sacred-red); box-shadow: 0 0 0 3px var(--ring); } .fk-input:disabled { cursor: not-allowed; opacity: 0.6; }'}</style>
+    <FormikFieldStyles />
   </div>
 }

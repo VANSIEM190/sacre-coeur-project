@@ -13,7 +13,7 @@ const PrivacyPage = lazy(() => import('../features/public/pages/PrivacyPage'))
 const SupportPage = lazy(() => import('../features/public/pages/SupportPage'))
 const LoginPage = lazy(() => import('../features/auth/pages/LoginPage'))
 const RegistrationPage = lazy(() => import('../features/auth/pages/ParentRegistrationPage'))
-const InvitationPage = lazy(() => import('../features/auth/pages/InvitationPage'))
+const TeacherActivationPage = lazy(() => import('../features/auth/pages/TeacherActivationPage'))
 const ParentDashboard = lazy(() => import('../features/dashboard/pages/ParentDashboardPage'))
 const ChildrenPage = lazy(() => import('../features/children/pages/ChildrenPage'))
 const ParentAnnouncements = lazy(() => import('../features/announcements/pages/ParentAnnouncementsPage'))
@@ -34,9 +34,9 @@ export default function App() {
       <Route path="/confidentialite" element={<PrivacyPage />} />
       <Route path="/support" element={<SupportPage />} />
       <Route path="/inscription" element={<RegistrationPage />} />
-      <Route path="/auth/invitation" element={<InvitationPage />} />
       <Route element={<GuestOnly homeByRole={{parent:'/parent',teacher:'/teacher'}} />}>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/inscription-enseignant" element={<TeacherActivationPage />} />
       </Route>
       <Route element={<RequireRole role="parent" />}>
         <Route path="/parent" element={<ParentLayout />}>

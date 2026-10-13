@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { ClassName, TeacherUser } from "@sacre-coeur/domain/types";
-import { Loader2, Mail, Pencil, Trash2 } from "lucide-react";
+import { Copy, Loader2, Pencil, Trash2 } from "lucide-react";
 
 interface TeacherListProps {
   teachers: TeacherUser[];
@@ -9,7 +9,6 @@ interface TeacherListProps {
   error: boolean;
   busyTeacherId?: string;
   onCopyAccessId: (accessId: string) => void;
-  onResendInvitation: (id: string) => void;
   onDelete: (teacher: TeacherUser) => void;
   onSaveClasses: (id: string, assignedclasses: string[]) => Promise<void>;
 }
@@ -21,7 +20,6 @@ export function TeacherList({
   error,
   busyTeacherId,
   onCopyAccessId,
-  onResendInvitation,
   onDelete,
   onSaveClasses,
 }: TeacherListProps) {
@@ -78,18 +76,13 @@ export function TeacherList({
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
-                onClick={() => onCopyAccessId(teacher.teacherAccessId)}
+                onClick={() => teacher.teacherAccessId && onCopyAccessId(teacher.teacherAccessId)}
+                disabled={!teacher.teacherAccessId}
                 className="rounded-lg border border-border px-3 py-2 text-sm"
               >
-                Copier ID
-              </button>
-              <button
-                type="button"
-                disabled={busyTeacherId === teacher.id}
-                onClick={() => onResendInvitation(teacher.id)}
-                className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm disabled:opacity-50"
-              >
-                <Mail className="size-4" /> Renvoyer l’invitation
+                <span className="inline-flex items-center gap-2">
+                  <Copy className="size-4" /> Copier le matricule
+                </span>
               </button>
               <button
                 type="button"

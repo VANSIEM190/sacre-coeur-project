@@ -1,8 +1,7 @@
-import { AuthSessionMissingError, type User } from '@supabase/supabase-js'
+import { AuthSessionMissingError, FunctionsHttpError, type User } from '@supabase/supabase-js'
 import { DomainError } from '@sacre-coeur/domain/errors'
 import type { AnyUser, ParentUser, UserRole } from '@sacre-coeur/domain/types'
 import { supabase } from '../../supabase/supabaseClient'
-import { hasPasswordSetupCallback, consumePasswordSetupCallback } from '../../supabase/password-callback'
 import { getErrorMessage } from '../core/Supabase.error.handler'
 import { teacherService } from '../teacher/teacher.service'
 
@@ -57,7 +56,6 @@ class AuthService {
         ...base,
         role,
         fullName: details.fullName || base.fullName,
-        teacherAccessId: details.teacherAccessId,
         assignedclasses: details.assignedclasses,
       }
     }
@@ -114,8 +112,27 @@ class AuthService {
     return this.toApplicationUser(user, await this.getRole(user.id))
   }
 
-  // Only parents may self-register. Privileged accounts are created by the
-  // admin-only teacher-accounts server function, never with client credentials.
+  async activateTeacher(teacherAccessId: string, password: string): Promise<string> {
+    const { data, error } = await supabase.functions.invoke<{
+      success: boolean
+      email: string
+      error?: string
+    }>('teacher-enrollment', { body: { teacherAccessId, password } })
+
+    if (error) {
+      if (error instanceof FunctionsHttpError) {
+        const response = await error.context.json().catch(() => null) as { error?: string } | null
+        if (response?.error) throw new DomainError(response.error, { cause: error })
+      }
+      throw new DomainError('Impossible d’activer ce compte enseignant.', { cause: error })
+    }
+    if (!data?.success || !data.email)
+      throw new DomainError(data?.error ?? 'Réponse invalide du serveur d’activation.')
+    return data.email
+  }
+
+  // Parents self-register directly. Teacher activation is handled by a server
+  // function that verifies the one-time matricule before creating an Auth user.
   async createAuthAccount(email: string, password: string, role: UserRole): Promise<string> {
     if (role !== 'parent') {
       throw new DomainError('Ce rôle doit être créé par un administrateur.')
@@ -162,19 +179,6 @@ class AuthService {
     await this.reauthenticate(currentPassword)
     const { error } = await supabase.auth.updateUser({ password: newPassword })
     if (error) throw new DomainError(getErrorMessage(error), { cause: error })
-  }
-
-  async setInvitedTeacherPassword(password: string): Promise<void> {
-    if (!hasPasswordSetupCallback()) {
-      throw new DomainError('Ouvrez le lien reçu par e-mail pour définir votre premier mot de passe.')
-    }
-    const user = await this.getCurrentUser()
-    if (!user || await this.getRole(user.id) !== 'teacher') {
-      throw new DomainError('Ce lien d’invitation est invalide ou a expiré. Contactez la direction.')
-    }
-    const { error } = await supabase.auth.updateUser({ password })
-    if (error) throw new DomainError(getErrorMessage(error), { cause: error })
-    consumePasswordSetupCallback()
   }
 
   async logout(): Promise<void> {

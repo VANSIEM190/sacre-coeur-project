@@ -1,21 +1,15 @@
 ﻿import { PageHeader } from '@sacre-coeur/ui/layouts/dashboard-shell'
 import { useFetchData } from '@sacre-coeur/data-access/hooks/useQuery'
-import { gradeService } from '@sacre-coeur/data-access/services/grade/grade.service'
 import { horraireServices } from '@sacre-coeur/data-access/services/schedule/schedule.service'
 import { Users, CalendarDays, ClipboardList, Loader2 } from 'lucide-react'
 import { useTeacherAssignments } from '../../classes/hooks/useTeacherAssignments'
 
 export default function TeacherDashboardPage() {
-  const { currentUser, teacher, schoolYear, assignedClasses, isLoading, error } = useTeacherAssignments()
+  const { currentUser, teacher, assignedClasses, isLoading, error } = useTeacherAssignments()
   const scheduleQuery = useFetchData(
     ['schedule', 'teacher', teacher?.id],
     () => horraireServices.getTeacherSchedule(teacher!.id),
     { enabled: !!teacher?.id }
-  )
-  const gradesQuery = useFetchData(
-    ['grades', 'teacher', currentUser?.id, schoolYear],
-    () => gradeService.getTeacherGrades(currentUser!.id, schoolYear),
-    { enabled: !!currentUser?.id }
   )
   const assignedIds = new Set(assignedClasses.map(schoolClass => schoolClass.id))
   const hours = (scheduleQuery.data ?? [])
@@ -27,24 +21,23 @@ export default function TeacherDashboardPage() {
       }
       return total + Math.max(0, minutes(entry.endTime) - minutes(entry.startTime))
     }, 0) / 60
-  const sheetsCount = new Set(
-    (gradesQuery.data ?? []).map(grade => JSON.stringify([grade.classe_id, grade.subject, grade.tranche]))
-  ).size
+  const subjectsCount = new Set((scheduleQuery.data ?? []).map(entry => JSON.stringify([entry.classe_id, entry.subject]))).size
 
   return (
     <div>
       <PageHeader title={`Bonjour, ${currentUser?.fullName ?? ''}`} subtitle="Votre espace enseignant." />
-      {isLoading || scheduleQuery.isLoading || gradesQuery.isLoading ? (
+      {isLoading ? (
         <div className="flex justify-center py-12"><Loader2 className="size-8 animate-spin text-sacred-red" /></div>
-      ) : error || scheduleQuery.error || gradesQuery.error ? (
+      ) : error ? (
         <p className="text-sm text-destructive mb-6">Impossible de charger votre tableau de bord.</p>
       ) : (
         <div className="grid sm:grid-cols-3 gap-4 mb-8">
           <Stat icon={Users} label="Classes attribuées" value={assignedClasses.length} />
-          <Stat icon={CalendarDays} label="Heures par semaine" value={Math.round(hours * 100) / 100} />
-          <Stat icon={ClipboardList} label="Fiches enregistrées" value={sheetsCount} />
+          <Stat icon={CalendarDays} label="Heures par semaine" value={scheduleQuery.isLoading ? '…' : scheduleQuery.error ? '—' : Math.round(hours * 100) / 100} />
+          <Stat icon={ClipboardList} label="Matières planifiées" value={scheduleQuery.isLoading ? '…' : scheduleQuery.error ? '—' : subjectsCount} />
         </div>
       )}
+      {!isLoading && !error && scheduleQuery.error && <p className="mb-6 text-sm text-destructive">Les horaires ne sont pas accessibles. Vérifiez les droits de lecture sur schedule_entries.</p>}
       <div className="p-6 rounded-3xl bg-card border border-border">
         <h2 className="font-display text-2xl mb-4">Vos classes</h2>
         <div className="flex flex-wrap gap-2">
@@ -58,7 +51,7 @@ export default function TeacherDashboardPage() {
   )
 }
 
-function Stat({ icon: Icon, label, value }: { icon: typeof Users; label: string; value: number }) {
+function Stat({ icon: Icon, label, value }: { icon: typeof Users; label: string; value: number | string }) {
   return (
     <div className="p-6 rounded-3xl bg-card border border-border">
       <div className="size-12 rounded-2xl bg-sacred-red/10 text-sacred-red grid place-items-center mb-3"><Icon className="size-5" /></div>

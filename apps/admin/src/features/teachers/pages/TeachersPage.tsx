@@ -13,7 +13,6 @@ export default function TeachersPage() {
     classesQuery,
     createTeacher,
     updateTeacher,
-    resendInvitation,
     deleteTeacher,
   } = useAdminTeachers();
   const teachers = teachersQuery.data ?? [];
@@ -21,8 +20,6 @@ export default function TeachersPage() {
   const busyTeacherId = (() => {
     if (updateTeacher.isPending && updateTeacher.variables)
       return updateTeacher.variables.id;
-    if (resendInvitation.isPending && resendInvitation.variables)
-      return resendInvitation.variables;
     if (deleteTeacher.isPending && deleteTeacher.variables)
       return deleteTeacher.variables;
     return undefined;
@@ -31,7 +28,7 @@ export default function TeachersPage() {
   const copyAccessId = async (accessId: string) => {
     try {
       await navigator.clipboard.writeText(accessId);
-      toast.success("Identifiant copié.");
+      toast.success("Matricule d’activation copié.");
     } catch (error) {
       SupabaseErrorHandler.handle(error);
     }
@@ -49,7 +46,7 @@ export default function TeachersPage() {
     <section className="space-y-6">
       <PageHeader
         title="Enseignants"
-        subtitle="Créez les comptes, attribuez les classes et gérez les invitations."
+        subtitle="Créez les fiches, attribuez les classes et transmettez les matricules d’activation."
       />
       <TeacherForm
         key={teachers.length}
@@ -75,7 +72,6 @@ export default function TeachersPage() {
           error={teachersQuery.isError}
           busyTeacherId={busyTeacherId}
           onCopyAccessId={(accessId) => void copyAccessId(accessId)}
-          onResendInvitation={(id) => resendInvitation.mutate(id)}
           onDelete={confirmDelete}
           onSaveClasses={async (id, assignedclasses) => {
             await updateTeacher.mutateAsync({ id, assignedclasses });

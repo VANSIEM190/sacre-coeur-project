@@ -17,6 +17,13 @@ interface TeacherRow {
   created_at: string
 }
 
+export interface TeacherAssignmentProfile {
+  id: string
+  fullName: string
+  email: string
+  assignedclasses: string[]
+}
+
 function mapTeacher(row: TeacherRow): TeacherUser {
   return { id: row.id, fullName: row.fullName, email: row.email, teacherAccessId: row.teacherAccessId,
     assignedclasses: parseAssignedClassIds(row.assignedclasses), role: 'teacher', createdAt: row.created_at }
@@ -36,17 +43,11 @@ async function invokeTeacherAccounts<T>(body: Record<string, unknown>): Promise<
 }
 
 class TeacherService {
-  /** Création Auth et invitation exécutées côté serveur avec contrôle du rôle admin. */
+  /** Crée uniquement la fiche et son matricule à usage unique côté serveur. */
   async register(values: RegisterTeacherInput): Promise<TeacherUser> {
     const validated = createTeacherSchema.safeParse(values)
     if (!validated.success) throw new DomainError(validated.error.issues[0]?.message ?? 'Informations enseignant invalides.')
     const result = await invokeTeacherAccounts<{ teacher: TeacherUser }>({ action: 'create', ...validated.data })
-    return result.teacher
-  }
-
-  async inviteTeacher(id: string): Promise<TeacherUser> {
-    requireUuid(id, "Identifiant de l'enseignant")
-    const result = await invokeTeacherAccounts<{ teacher: TeacherUser }>({ action: 'invite', id })
     return result.teacher
   }
 
@@ -62,11 +63,18 @@ class TeacherService {
     return data ? mapTeacher(data) : null
   }
 
-  async getDetailsByUserId(userId: string): Promise<TeacherUser | null> {
+  async getDetailsByUserId(userId: string): Promise<TeacherAssignmentProfile | null> {
     requireUuid(userId, "Identifiant de l'utilisateur")
-    const { data, error } = await supabase.from('enseignants_details').select('*').eq('user_id', userId).maybeSingle()
+    const { data, error } = await supabase.from('enseignants_details')
+      .select('id,fullName,email,assignedclasses').eq('user_id', userId).maybeSingle()
     if (error) throw error
-    return data ? mapTeacher(data) : null
+    if (!data) return null
+    return {
+      id: data.id,
+      fullName: data.fullName,
+      email: data.email,
+      assignedclasses: parseAssignedClassIds(data.assignedclasses),
+    }
   }
 
   async updateTeacher(id: string, updates: Partial<RegisterTeacherInput>): Promise<TeacherUser> {

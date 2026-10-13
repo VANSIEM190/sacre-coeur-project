@@ -11,7 +11,7 @@ const guides = [
   },
   {
     title: "Se connecter en tant qu'enseignant",
-    text: "Utilisez l'email reçu et l'ID enseignant communiqué par l'administration.",
+    text: "Pour la première inscription, utilisez le matricule d’activation remis par l’administration et choisissez un mot de passe. Ensuite, connectez-vous avec votre adresse e-mail et ce mot de passe.",
   },
   {
     title: 'Télécharger un bulletin',

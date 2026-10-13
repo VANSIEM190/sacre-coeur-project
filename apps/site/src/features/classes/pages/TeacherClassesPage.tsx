@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { PageHeader } from "@sacre-coeur/ui/layouts/dashboard-shell";
 import { Loader2, Search } from "lucide-react";
-import StudentProfile from "@sacre-coeur/school-features/students/components/StudentProfile";
+import TeacherStudentAcademicProfile from "../components/TeacherStudentAcademicProfile";
 import { useTeacherClasses } from "../hooks/useTeacherClasses";
 
 export default function TeacherClassesPage() {
@@ -19,13 +19,13 @@ export default function TeacherClassesPage() {
         <Loader2 className="size-7 animate-spin" />
       </div>
     );
-  if (classes.error)
+  if (classes.assignmentError)
     return (
       <p
         role="alert"
         className="rounded-xl border border-destructive/30 p-4 text-sm text-destructive"
       >
-        Impossible de charger les classes du professeur.
+        Impossible de charger votre profil ou vos classes. Vérifiez votre affectation dans l’administration.
       </p>
     );
 
@@ -39,7 +39,7 @@ export default function TeacherClassesPage() {
         >
           ← Retour à la classe
         </button>
-        <StudentProfile student={selectedStudent} />
+        <TeacherStudentAcademicProfile student={selectedStudent} />
       </section>
     );
 
@@ -78,6 +78,10 @@ export default function TeacherClassesPage() {
               <p className="mt-2 text-sm text-muted-foreground">
                 Chargement des horaires…
               </p>
+            ) : classes.subjectsError ? (
+              <p role="alert" className="mt-2 text-sm text-destructive">
+                Impossible de charger vos matières. Vérifiez les droits de lecture des horaires pour les enseignants.
+              </p>
             ) : classes.subjects.length ? (
               <ul className="mt-2 flex flex-wrap gap-2">
                 {classes.subjects.map((subject) => (
@@ -110,6 +114,10 @@ export default function TeacherClassesPage() {
             <div className="flex justify-center p-8">
               <Loader2 className="size-6 animate-spin" />
             </div>
+          ) : classes.studentError ? (
+            <p role="alert" className="rounded-xl border border-destructive/30 p-4 text-center text-sm text-destructive">
+              La liste des élèves n’est pas accessible. La migration Supabase qui crée l’accès sécurisé aux élèves doit être appliquée.
+            </p>
           ) : (
             <ul className="divide-y divide-border rounded-xl border border-border bg-card">
               {classes.students.map((student) => (
@@ -123,9 +131,6 @@ export default function TeacherClassesPage() {
                       {[student.firstName, student.middleName, student.lastName]
                         .filter(Boolean)
                         .join(" ")}
-                    </span>
-                    <span className="text-sm text-muted-foreground">
-                      {student.phone}
                     </span>
                   </button>
                 </li>

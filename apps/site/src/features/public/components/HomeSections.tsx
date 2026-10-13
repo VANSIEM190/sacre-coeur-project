@@ -16,7 +16,7 @@ const faqs = [
   { q: "Comment se passe l'inscription d'un nouvel élève ?", a: "Le formulaire d'inscription se remplit en ligne. Une fois soumis, l'administration valide le dossier après vérification." },
   { q: 'Quels sont les modes de paiement du minerval ?', a: "Le paiement s'effectue physiquement à la caisse de l'école. Un reçu numérique est ensuite généré sur l'espace de l'élève." },
   { q: 'Comment télécharger le bulletin scolaire ?', a: 'Les bulletins sont disponibles au format PDF dès que la tranche de minerval correspondante est soldée.' },
-  { q: 'Comment un enseignant accède-t-il à son espace ?', a: "L'administration génère un identifiant unique (ID enseignant). L'enseignant l'utilise pour se connecter avec son email." },
+  { q: 'Comment un enseignant accède-t-il à son espace ?', a: "L’administration remet un matricule d’activation à l’enseignant. Il l’utilise une seule fois pour choisir son mot de passe, puis se connecte avec son adresse e-mail." },
 ]
 
 const featureCards = [

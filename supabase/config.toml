@@ -5,3 +5,10 @@ verify_jwt = true
 entrypoint = "./functions/teacher-accounts/index.ts"
 import_map = "./functions/teacher-accounts/deno.json"
 
+# First-time teacher activation has no Supabase user session yet. The handler
+# validates a one-time 122-bit matricule before creating any Auth account.
+[functions.teacher-enrollment]
+verify_jwt = false
+entrypoint = "./functions/teacher-enrollment/index.ts"
+import_map = "./functions/teacher-enrollment/deno.json"
+

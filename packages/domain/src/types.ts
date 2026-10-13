@@ -20,6 +20,7 @@ export interface ClassName {
 export type SchoolClassName = string
 
 export type PaymentTranche = 1 | 2 | 3
+export type AcademicTerm = 1 | 2 | 3
 
 export interface BaseUser {
   id: string
@@ -35,7 +36,8 @@ export interface AdminUser extends BaseUser {
 
 export interface TeacherUser extends BaseUser {
   role: 'teacher'
-  teacherAccessId: string
+  /** Absent from an authenticated teacher session; returned only in admin views. */
+  teacherAccessId?: string
   assignedclasses: string[]
 }
 
@@ -91,6 +93,15 @@ export interface EleveDetails {
   /** Champs calculés à la lecture : classe acceptée, distincte d'une demande en attente. */
   currentClassId?: string
   currentClassLabel?: string
+}
+
+/** Données scolaires limitées renvoyées à un enseignant pour sa classe. */
+export interface TeacherRosterStudent {
+  id: string
+  firstName: string
+  middleName: string | null
+  lastName: string
+  className: string
 }
 
 export interface Inscription {

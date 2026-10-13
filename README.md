@@ -68,7 +68,8 @@ packages/
   ui/                          # Composants visuels, styles et préférences UI
   school-features/             # Fonctionnalités scolaires réellement partagées
 supabase/
-  functions/teacher-accounts/  # Création, invitation et suppression enseignants
+  functions/teacher-accounts/  # Gestion admin des fiches enseignants
+  functions/teacher-enrollment/ # Première activation avec matricule à usage unique
   migrations/README.md        # État du schéma et procédure de récupération
   tests/                      # Tests des autorisations et commandes serveur
 config/                       # Configuration Vite commune
@@ -88,7 +89,7 @@ Les workspaces npm relient ces dossiers avec les imports `@sacre-coeur/...`. Les
 | Présentation réutilisable | `packages/ui` | Boutons, tableaux, shell de dashboard, formulaire de connexion |
 | Parcours utilisé par plusieurs espaces | `packages/school-features` | Profil élève, paramètres du compte, documents PDF |
 | Écran propre à un espace | `apps/*/src/features` | Paiements admin, cours parent, cotations enseignant |
-| Opération utilisant les droits Auth admin | `supabase/functions` | Invitation d'un enseignant |
+| Opération utilisant les droits Auth admin | `supabase/functions` | Activation sécurisée du compte enseignant |
 
 Une page compose les composants et déclenche les actions. Les hooks coordonnent les données, mutations et invalidations. Les services appliquent leurs validations et adaptent les contrats de stockage, sans afficher de toast. Les notifications restent dans la couche interface. Les règles de calcul ne dépendent ni du navigateur ni de Supabase.
 
@@ -114,13 +115,11 @@ Les parents conservent leur inscription depuis le site. La création Auth, `prof
 
 ### Enseignants
 
-L'admin crée un enseignant depuis l'écran existant. Le navigateur appelle la fonction `teacher-accounts`. Celle-ci vérifie le JWT, relit le rôle admin en base, valide les classes et impose le rôle `teacher` côté serveur. Elle conserve le contrat `enseignants_details` existant, crée un nouveau compte Auth, initialise son profil, lie son `user_id` puis envoie l'invitation. Un email appartenant déjà à un autre compte Auth exige une vérification administrative ; ce compte n'est pas réaffecté automatiquement.
+L'admin crée la fiche enseignant (nom, e-mail, classes) avec la fonction `teacher-accounts`. Cette fonction exige un JWT valide, vérifie le rôle admin en base et valide les classes. Elle crée un matricule d'activation aléatoire de 122 bits, sans créer de compte Auth ni envoyer de courriel. L'admin transmet ce matricule à l'enseignant par un canal privé.
 
-Le lien reçu conduit au site sur `/auth/invitation`. L'enseignant définit son mot de passe après réception d'un callback Supabase d'invitation ou de récupération et vérification de sa session. Le marqueur de callback est conservé seulement en mémoire ; aucun token supplémentaire n'est enregistré par l'application. En cas de rechargement de cette page, un nouveau lien peut être nécessaire.
+Pour sa première inscription, l'enseignant saisit le matricule et choisit un mot de passe sur `/inscription-enseignant`. La fonction `teacher-enrollment` retrouve une fiche non liée, crée le compte Auth avec l'adresse déjà enregistrée, crée le profil `teacher`, puis lie l'identifiant Auth à `enseignants_details.user_id` avec une mise à jour conditionnelle. Un matricule inconnu ou déjà consommé est refusé. Le code d'activation est traité comme un secret à usage unique ; la fonction ne renvoie pas l'adresse e-mail en cas d'échec.
 
-Le bouton d'invitation permet aussi de reprendre un compte ancien non lié. Pour un compte déjà lié, le lien utilise l'email confirmé du compte Auth. Un enseignant activé change son email depuis les paramètres de son compte, afin de conserver la cohérence entre Auth et ses détails.
-
-Les échecs partiels sont signalés. Une invitation non envoyée laisse la fiche disponible pour réessayer. La compensation d'une création ne supprime que le compte Auth venant d'être créé. Les opérations DB/Auth ne constituent pas une transaction SQL ; une suppression partiellement échouée peut nécessiter une intervention dans Supabase.
+L'activation est une opération Auth/DB multi-étapes, pas une transaction SQL. En cas d'échec après création du compte Auth, la fonction tente de supprimer les écritures créées. Les erreurs de compensation sont consignées côté serveur, sans journaliser le matricule ni le mot de passe.
 
 ## Règles métier conservées et corrigées
 
@@ -140,18 +139,17 @@ Les échecs partiels sont signalés. Une invitation non envoyée laisse la fiche
 
 Le dossier `supabase` versionne le code serveur nécessaire aux comptes enseignants et ses tests. `migrations` ne contient pas de SQL inventé : le dépôt initial ne fournissait ni DDL, ni policies, ni définition des RPC. Lire [supabase/migrations/README.md](supabase/migrations/README.md) avant toute évolution du schéma.
 
-Avant utilisation des actions enseignants sur un environnement réel, installer la CLI Supabase, lier le **projet réel**, configurer `SITE_URL` et `ADMIN_ORIGIN`, puis déployer `teacher-accounts`. `supabase/.env.example` donne les valeurs locales. En production, renseigner les deux origines réelles. La fonction obtient `SUPABASE_URL` et `SUPABASE_SERVICE_ROLE_KEY` dans son environnement serveur.
+Avant utilisation des actions enseignants, le projet Supabase doit déjà contenir le schéma et les politiques attendus (`profiles`, `classes`, `enseignants_details`). Installer la CLI Supabase, lier le projet voulu, configurer `SITE_URL` et `ADMIN_ORIGIN`, puis déployer les deux fonctions. `supabase/.env.example` donne les origines locales. En production, renseigner les domaines réels. Les fonctions obtiennent `SUPABASE_URL` et `SUPABASE_SERVICE_ROLE_KEY` dans leur environnement serveur.
 
 ```bash
 supabase login
 supabase link --project-ref IDENTIFIANT_DU_PROJET_REEL
 supabase secrets set SITE_URL=https://DOMAINE_DU_SITE ADMIN_ORIGIN=https://SOUS_DOMAINE_ADMIN
 supabase functions deploy teacher-accounts
+supabase functions deploy teacher-enrollment
 ```
 
-Ces commandes de déploiement sont documentées et n'ont pas été exécutées. La fonction garde `verify_jwt = true` et vérifie également l'utilisateur dans son gestionnaire. Voir les guides officiels [sécurisation des fonctions](https://supabase.com/docs/guides/functions/auth) et [déploiement](https://supabase.com/docs/guides/functions/deploy).
-
-Ajouter l'URL exacte `/auth/invitation` du site dans les redirections Auth autorisées et vérifier le modèle d'email correspondant. Les réglages sont décrits dans [la documentation des redirections Supabase](https://supabase.com/docs/guides/auth/redirect-urls).
+`teacher-accounts` conserve `verify_jwt = true` et contrôle le rôle admin. `teacher-enrollment` utilise `verify_jwt = false` car l'enseignant n'a pas encore de session ; son accès est limité par un matricule aléatoire à usage unique de 122 bits. Ne pas désactiver le contrôle JWT de `teacher-accounts`. Voir les guides officiels [sécurisation des fonctions](https://supabase.com/docs/guides/functions/auth) et [déploiement](https://supabase.com/docs/guides/functions/deploy).
 
 ### Contrats à confronter à la base réelle
 
@@ -170,7 +168,7 @@ Vérifier les policies parent/enfants, enseignant/classes/notes, admin, ainsi qu
 
 ## Validation et évolution
 
-Les tests locaux couvrent les calculs financiers, montants/devise/tranche, notes, horaires, année scolaire, réinscriptions, invitations, rôles serveur, suppressions ciblées et compensations. Ils utilisent des doubles de Supabase et n'envoient aucun email réel. Le TypeScript vérifie aussi les fonctions serveur ; leur exécution sur Deno et leur déploiement distant nécessitent un environnement Supabase.
+Les tests locaux couvrent les calculs financiers, montants/devise/tranche, notes, horaires, année scolaire, réinscriptions, activation enseignant à usage unique, rôles serveur, suppressions ciblées et compensations. Ils utilisent des doubles de Supabase et ne créent aucun compte réel. Le TypeScript vérifie aussi les fonctions serveur ; leur exécution sur Deno et leur déploiement distant nécessitent un environnement Supabase.
 
 Le contrôle navigateur couvre les pages publiques et connexions, la séparation admin et le rendu desktop/mobile. Il ne valide pas les parcours authentifiés de bout en bout : ils nécessitent une base réelle, ses droits et des comptes de test autorisés.
 

@@ -17,7 +17,7 @@ export function useAdminTeachers() {
   const createTeacher = useMutateData((input: RegisterTeacherInput) => teacherService.register(input), {
     onSuccess: async () => {
       await refreshTeachers()
-      toast.success('Le professeur a été créé. Un e-mail d’activation lui a été envoyé.')
+      toast.success('La fiche professeur et son matricule d’activation ont été créés.')
     },
     onError: error => toast.error(error.message),
   })
@@ -29,10 +29,6 @@ export function useAdminTeachers() {
     },
     onError: error => toast.error(error.message),
   })
-  const resendInvitation = useMutateData((id: string) => teacherService.inviteTeacher(id), {
-    onSuccess: () => toast.success('Le lien d’activation a été renvoyé.'),
-    onError: error => toast.error(error.message),
-  })
   const deleteTeacher = useMutateData((id: string) => teacherService.deleteTeacher(id), {
     onSuccess: async () => {
       await refreshTeachers()
@@ -41,5 +37,5 @@ export function useAdminTeachers() {
     onError: error => toast.error(error.message),
   })
 
-  return { teachersQuery, classesQuery, createTeacher, updateTeacher, resendInvitation, deleteTeacher }
+  return { teachersQuery, classesQuery, createTeacher, updateTeacher, deleteTeacher }
 }

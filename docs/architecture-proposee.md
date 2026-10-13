@@ -179,7 +179,7 @@ Le composant `StudentProfile` est utilisé à la fois par l'admin et le parent. 
 
 | Module | Contenu | Base actuelle à reprendre |
 | --- | --- | --- |
-| Identity | Session, profils, rôles, invitations et comptes | `auth`, `parent`, partie identité de `teacher` |
+| Identity | Session, profils, rôles et comptes | `auth`, `parent`, partie identité de `teacher` |
 | Students | Fiche élève et relation avec son responsable | `student/Student.service.ts` |
 | Enrollments | Inscription, réinscription, validation et année scolaire | `student/inscription.service.ts` et validation élève |
 | Academics | Classes, enseignants, affectations, cours et horaires | `classe`, `teacher`, `course`, `schedule` |
@@ -221,7 +221,7 @@ Versionner le schéma distant existant avant d'introduire de nouvelles migration
 Points métier déjà identifiés :
 
 1. Les statuts `valide`, `accepte`, `refuse` et `rejete` doivent être harmonisés avec le schéma réel. Choisir une seule terminologie puis migrer les données et les types ensemble.
-2. `TeacherService.activateAccount` demande un compte `teacher` à une méthode qui n'autorise que `parent`. Remplacer ce parcours par un flux d'invitation/activation vérifié côté serveur.
+2. L'activation initiale d'un enseignant doit être vérifiée côté serveur avec un matricule à usage unique ; le navigateur ne doit jamais utiliser la clé service role.
 3. `TeacherService.deleteTeacher` transmet un identifiant à `deleteAccount`, qui attend le mot de passe de l'utilisateur courant. Créer une commande de gestion d'un autre compte, distincte de la suppression de son propre compte.
 4. Les affectations existent dans un tableau `assignedclasses` et dans `classe_enseignant`. Retenir la relation comme référence et dériver les listes affichées.
 5. L'ouverture des réinscriptions, les transitions et l'appartenance de l'élève doivent être garanties côté base, même si l'interface effectue déjà une vérification.

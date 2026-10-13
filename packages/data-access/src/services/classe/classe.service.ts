@@ -1,6 +1,6 @@
 
 import { supabase } from '../../supabase/supabaseClient'
-import type { ClassName, EleveDetails } from '@sacre-coeur/domain/types'
+import type { ClassName, EleveDetails, TeacherRosterStudent } from '@sacre-coeur/domain/types'
 import { requireText, requireUuid } from '@sacre-coeur/domain/validation'
 import { DomainError } from '@sacre-coeur/domain/errors'
 
@@ -23,6 +23,18 @@ class ClassService {
     }))
   }
 
+  async getTeacherAssignedClasses(classIds: string[], schoolYear: string): Promise<ClassName[]> {
+    if (!classIds.length) return []
+    classIds.forEach(classId => requireUuid(classId, 'Identifiant de classe'))
+    const { data, error } = await supabase.from('classes')
+      .select('id,nom_classe,annee_scolaire')
+      .in('id', [...new Set(classIds)])
+      .eq('annee_scolaire', requireText(schoolYear, 'Année scolaire'))
+      .order('nom_classe', { ascending: true })
+    if (error) throw error
+    return (data ?? []).map(row => ({ ...row, studentCount: 0 }))
+  }
+
   async getStudentsInClass(classId: string): Promise<EleveDetails[]> {
     requireUuid(classId, 'Identifiant de classe')
     const { data, error } = await supabase.from('inscriptions').select('eleves_details(*)')
@@ -30,6 +42,18 @@ class ClassService {
     if (error) throw error
     return (data ?? []).map(row => row.eleves_details).filter((student): student is EleveDetails => student !== null)
       .sort((first, second) => first.lastName.localeCompare(second.lastName))
+  }
+
+  /** Liste scolaire minimale, autorisée côté base selon l'affectation du professeur. */
+  async getTeacherStudentsInClass(classId: string, schoolYear: string): Promise<TeacherRosterStudent[]> {
+    requireUuid(classId, 'Identifiant de classe')
+    const { data, error } = await supabase.rpc('get_teacher_class_students', {
+      p_class_id: classId,
+      p_school_year: requireText(schoolYear, 'Année scolaire'),
+    }).returns<TeacherRosterStudent[]>()
+    if (error) throw error
+    const students = (data ?? []) as unknown as TeacherRosterStudent[]
+    return students.sort((a, b) => a.lastName.localeCompare(b.lastName))
   }
 
   async createClass(nomClasse: string, anneeScolaire: string): Promise<Omit<ClassName, 'studentCount'>> {

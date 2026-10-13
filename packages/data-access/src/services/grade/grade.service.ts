@@ -1,96 +1,142 @@
-
-import { requireText, requireUuid, validateGrade, validateTranche } from '@sacre-coeur/domain/validation'
-import { DomainError } from '@sacre-coeur/domain/errors'
-import { supabase } from '../../supabase/supabaseClient'
+import {
+  requireText,
+  requireUuid,
+  validateAcademicTerm,
+  validateGrade,
+} from "@sacre-coeur/domain/validation";
+import { DomainError } from "@sacre-coeur/domain/errors";
+import type { AcademicTerm } from "@sacre-coeur/domain/types";
+import { supabase } from "../../supabase/supabaseClient";
 
 export interface GradeEntry {
-  eleve_id: string
-  classe_id: string
-  teacher_id: string
-  subject: string
-  tranche: 1 | 2 | 3
-  score: number
-  max_score: number
-  school_year: string
+  eleve_id: string;
+  score: number;
 }
 
 export interface Grade extends GradeEntry {
-  id: string
-  created_at: string
-  updated_at: string
+  id: string;
+  grade_sheet_id: string;
+  created_at: string;
+  updated_at: string;
 }
 
-function validateEntry(entry: GradeEntry): GradeEntry {
-  requireUuid(entry.eleve_id, "Identifiant de l'élève")
-  requireUuid(entry.classe_id, 'Identifiant de classe')
-  requireUuid(entry.teacher_id, "Identifiant de l'enseignant")
-  validateTranche(entry.tranche)
-  validateGrade(entry.score, entry.max_score)
+export interface GradeSheet {
+  id: string;
+  classe_id: string;
+  teacher_id: string;
+  subject: string;
+  academic_term: AcademicTerm;
+  max_score: number;
+  school_year: string;
+  created_at: string;
+  updated_at: string;
+  grades: Grade[];
+}
+
+export interface GradeSheetInput {
+  classe_id: string;
+  teacher_id: string;
+  subject: string;
+  academic_term: AcademicTerm;
+  max_score: number;
+  school_year: string;
+  grades: GradeEntry[];
+}
+
+function validateSheet(input: GradeSheetInput): GradeSheetInput {
+  requireUuid(input.classe_id, "Identifiant de classe");
+  requireUuid(input.teacher_id, "Identifiant de l'enseignant");
+  validateAcademicTerm(input.academic_term);
+  const subject = requireText(input.subject, "Matière");
+  const school_year = requireText(input.school_year, "Année scolaire");
+  if (!Number.isFinite(input.max_score) || input.max_score <= 0)
+    throw new DomainError("Le point maximum doit être supérieur à zéro.");
+  if (!input.grades.length) throw new DomainError("La fiche ne contient aucune note.");
+
+  const seenStudents = new Set<string>();
+  const grades = input.grades.map((entry) => {
+    requireUuid(entry.eleve_id, "Identifiant de l'élève");
+    validateGrade(entry.score, input.max_score);
+    if (seenStudents.has(entry.eleve_id))
+      throw new DomainError("Un élève apparaît plusieurs fois dans cette fiche.");
+    seenStudents.add(entry.eleve_id);
+    return { eleve_id: entry.eleve_id, score: entry.score };
+  });
+
+  return { ...input, subject, school_year, grades };
+}
+
+function mapGradeSheet(sheet: GradeSheet): GradeSheet {
   return {
-    eleve_id: entry.eleve_id, classe_id: entry.classe_id, teacher_id: entry.teacher_id,
-    tranche: entry.tranche, score: entry.score, max_score: entry.max_score,
-    subject: requireText(entry.subject, 'Matière'), school_year: requireText(entry.school_year, 'Année scolaire'),
-  }
-}
-
-function mapGrade(grade: Grade): Grade {
-  return { ...grade, score: Number(grade.score), max_score: Number(grade.max_score) }
+    ...sheet,
+    max_score: Number(sheet.max_score),
+    grades: (sheet.grades ?? []).map((grade) => ({
+      ...grade,
+      score: Number(grade.score),
+    })),
+  };
 }
 
 class GradeService {
-  async getGrade(eleveId: string, subject: string, tranche: number, schoolYear: string): Promise<Grade | null> {
-    requireUuid(eleveId, "Identifiant de l'élève")
-    validateTranche(tranche)
-    const { data, error } = await supabase.from('grades').select('*')
-      .eq('eleve_id', eleveId).eq('subject', requireText(subject, 'Matière')).eq('tranche', tranche)
-      .eq('school_year', requireText(schoolYear, 'Année scolaire')).maybeSingle()
-    if (error) throw error
-    return data ? mapGrade(data) : null
+  async getTeacherGradeSheets(
+    teacherId: string,
+    schoolYear: string,
+  ): Promise<GradeSheet[]> {
+    requireUuid(teacherId, "Identifiant de l'enseignant");
+    const { data, error } = await supabase
+      .from("grade_sheets")
+      .select(
+        "id,classe_id,teacher_id,subject,academic_term,max_score,school_year,created_at,updated_at,grades(id,grade_sheet_id,eleve_id,score,created_at,updated_at)",
+      )
+      .eq("teacher_id", teacherId)
+      .eq("school_year", requireText(schoolYear, "Année scolaire"))
+      .order("updated_at", { ascending: false })
+      .returns<GradeSheet[]>();
+    if (error) throw error;
+    return (data ?? []).map(mapGradeSheet);
   }
 
-  /** grades.teacher_id désigne l'utilisateur Auth, pas enseignants_details.id. */
-  async getTeacherGrades(teacherId: string, schoolYear: string): Promise<Grade[]> {
-    requireUuid(teacherId, "Identifiant de l'enseignant")
-    const { data, error } = await supabase.from('grades').select('*').eq('teacher_id', teacherId)
-      .eq('school_year', requireText(schoolYear, 'Année scolaire')).order('subject', { ascending: true })
-    if (error) throw error
-    return (data ?? []).map(mapGrade)
+  async saveGradeSheet(input: GradeSheetInput): Promise<string> {
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+    if (authError) throw authError;
+    if (!user) throw new DomainError("Veuillez vous reconnecter.");
+
+    const sheet = validateSheet(input);
+    if (sheet.teacher_id !== user.id)
+      throw new DomainError("L'enseignant doit correspondre au compte connecté.");
+
+    const { data, error } = await supabase.rpc("save_teacher_grade_sheet", {
+      p_classe_id: sheet.classe_id,
+      p_subject: sheet.subject,
+      p_academic_term: sheet.academic_term,
+      p_max_score: sheet.max_score,
+      p_school_year: sheet.school_year,
+      p_scores: sheet.grades,
+    });
+    if (error) throw error;
+    if (typeof data !== "string")
+      throw new DomainError("La fiche n'a pas été enregistrée.");
+    return data;
   }
 
-  async getClassGrades(classId: string, schoolYear: string): Promise<Grade[]> {
-    requireUuid(classId, 'Identifiant de classe')
-    const { data, error } = await supabase.from('grades').select('*').eq('classe_id', classId)
-      .eq('school_year', requireText(schoolYear, 'Année scolaire')).order('subject', { ascending: true })
-    if (error) throw error
-    return (data ?? []).map(mapGrade)
-  }
+  async deleteGradeSheet(gradeSheetId: string): Promise<void> {
+    requireUuid(gradeSheetId, "Identifiant de la fiche");
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+    if (authError) throw authError;
+    if (!user) throw new DomainError("Veuillez vous reconnecter.");
 
-  async saveGrade(entry: GradeEntry): Promise<Grade> {
-    const grades = await this.saveGrades([entry])
-    if (!grades[0]) throw new DomainError("La note n'a pas été enregistrée.")
-    return grades[0]
-  }
-
-  /** Une seule requête pour le lot. La contrainte unique utilisée existait déjà dans le service initial. */
-  async saveGrades(entries: GradeEntry[]): Promise<Grade[]> {
-    if (!entries.length) throw new DomainError('Aucune note à enregistrer.')
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError) throw authError
-    if (!user) throw new DomainError('Veuillez vous reconnecter.')
-    const seen = new Set<string>()
-    const payload = entries.map(entry => {
-      if (entry.teacher_id !== user.id) throw new DomainError("L'enseignant doit correspondre au compte connecté.")
-      const validated = validateEntry(entry)
-      const key = [validated.eleve_id, validated.subject, validated.tranche, validated.school_year].join('|')
-      if (seen.has(key)) throw new DomainError('Le lot contient plusieurs notes pour le même élève, matière et tranche.')
-      seen.add(key)
-      return validated
-    })
-    const { data, error } = await supabase.from('grades')
-      .upsert(payload, { onConflict: 'eleve_id,subject,tranche,school_year' }).select()
-    if (error) throw error
-    return (data ?? []).map(mapGrade)
+    const { data, error } = await supabase.rpc("delete_teacher_grade_sheet", {
+      p_grade_sheet_id: gradeSheetId,
+    });
+    if (error) throw error;
+    if (data !== true) throw new DomainError("La fiche n'a pas pu être supprimée.");
   }
 }
 
-export const gradeService = new GradeService()
+export const gradeService = new GradeService();

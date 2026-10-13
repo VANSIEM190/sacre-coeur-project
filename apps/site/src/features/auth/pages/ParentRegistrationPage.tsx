@@ -1,10 +1,11 @@
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Formik, Form, Field, ErrorMessage } from 'formik'
+import { Formik, Form } from 'formik'
 import { useEffect } from 'react'
 import { useParentRegistration } from '../hooks/useParentRegistration'
 import { parentSchema, type ParentFormValues } from '@sacre-coeur/domain/validators/usersSchema'
 import { validateWithZod } from '@sacre-coeur/domain/utils/validateWithZod'
+import { FormGrid, FormikField, FormikFieldStyles } from '../../../shared/forms/FormikFields'
 
 const initialValues: ParentFormValues = {
   lastName: '',
@@ -137,7 +138,7 @@ function InscriptionParentPage() {
         </Formik>
       </div>
 
-      <style>{`.fk-input { width: 100%; padding: 0.75rem 0.875rem; border-radius: 0.625rem; border: 1px solid var(--color-border); background: var(--color-card); color: var(--color-foreground); font-size: 0.9rem; outline: none; transition: all 0.2s; } .fk-input:focus { border-color: var(--sacred-red); box-shadow: 0 0 0 3px var(--ring); }`}</style>
+      <FormikFieldStyles />
     </div>
   )
 }
@@ -159,34 +160,6 @@ function FormSection({
       <h2 className="font-display text-2xl mb-6">{title}</h2>
       {children}
     </motion.section>
-  )
-}
-
-function FormGrid({ children }: { children: React.ReactNode }) {
-  return <div className="grid sm:grid-cols-2 gap-4">{children}</div>
-}
-
-function FormikField({
-  name,
-  label,
-  type = 'text',
-}: {
-  name: string
-  label: string
-  type?: string
-}) {
-  return (
-    <label className="block">
-      <span className="text-xs font-semibold uppercase tracking-wider opacity-70 mb-2 block">
-        {label}
-      </span>
-      <Field name={name} type={type} className="fk-input" />
-      <ErrorMessage
-        name={name}
-        component="div"
-        className="text-xs text-destructive mt-1"
-      />
-    </label>
   )
 }
 
